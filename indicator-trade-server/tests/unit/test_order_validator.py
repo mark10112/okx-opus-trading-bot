@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from indicator_trade.models.order import OrderRequest
-from indicator_trade.trade.order_validator import OrderValidator, ValidationResult
+from indicator_trade.trade.order_validator import OrderValidator
 
 
 @pytest.fixture

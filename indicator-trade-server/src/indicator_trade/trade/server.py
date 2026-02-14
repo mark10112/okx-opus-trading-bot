@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from indicator_trade.models.messages import StreamMessage, TradeFillMessage
-from indicator_trade.models.order import OrderRequest, OrderResult
+from indicator_trade.models.order import OrderRequest
 from indicator_trade.models.position import AccountState
 from indicator_trade.trade.okx_rest import OKXRestClient
 from indicator_trade.trade.order_executor import OrderExecutor

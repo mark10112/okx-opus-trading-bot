@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from indicator_trade.models.messages import StreamMessage, TradeFillMessage, TradeOrderMessage
-from indicator_trade.models.order import OrderRequest, OrderResult
-from indicator_trade.models.position import AccountState, Position
+from indicator_trade.models.messages import TradeOrderMessage
+from indicator_trade.models.order import OrderResult
+from indicator_trade.models.position import Position
 from indicator_trade.trade.server import TradeServer
 
 
@@ -72,7 +72,7 @@ class TestStartStop:
 
         with patch(
             "indicator_trade.trade.server.OKXRestClient"
-        ) as mock_rest_cls, patch(
+        ), patch(
             "indicator_trade.trade.server.OKXPrivateWS", return_value=mock_ws
         ), patch(
             "indicator_trade.trade.server.OrderValidator"

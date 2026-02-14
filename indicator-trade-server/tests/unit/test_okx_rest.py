@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from indicator_trade.models.order import OrderRequest, OrderResult
-from indicator_trade.models.position import AccountState, Position
+from indicator_trade.models.order import OrderRequest
+from indicator_trade.models.position import AccountState
 from indicator_trade.trade.okx_rest import OKXRestClient
 
 
