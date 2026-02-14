@@ -14,7 +14,7 @@ Build a self-learning AI crypto trading bot using Claude Opus 4.6 as the brain, 
 |-------|------|--------|-------|
 | 0 | Infrastructure & Repo Scaffolding | ✅ Done | All scaffolding, Docker, DB migrations, shared protocol complete |
 | 1 | Indicator Server — Market Data Pipeline | ✅ Done | 98 unit tests, all 6 components implemented |
-| 2 | Trade Server — Order Execution | 🔲 Not started | Files exist as stubs (`...` bodies) |
+| 2 | Trade Server — Order Execution | ✅ Done | 127 unit tests, all 6 components implemented |
 | 3 | Orchestrator Core — State Machine, Risk Gate, DB | 🔲 Not started | Files exist as stubs (`...` bodies) |
 | 4 | Orchestrator AI Integration | 🔲 Not started | Files exist as stubs (`...` bodies) |
 | 5 | Telegram Bot | 🔲 Not started | Files exist as stubs (`...` bodies) |
@@ -22,7 +22,7 @@ Build a self-learning AI crypto trading bot using Claude Opus 4.6 as the brain, 
 | 7 | Integration Testing & End-to-End | 🔲 Not started | — |
 | 8 | Polish & Production Readiness | 🔲 Not started | — |
 
-**Last updated**: 2025-07-15
+**Last updated**: 2025-07-16
 
 ---
 
@@ -171,9 +171,9 @@ Every 300s: aggregate candles, compute indicators (3 TFs), detect regime, fetch 
 
 ---
 
-## Phase 2: Trade Server -- Order Execution 🔲
+## Phase 2: Trade Server -- Order Execution ✅
 
-### 2.1 OKX REST Client Wrapper (`okx_rest.py`) 🔲
+### 2.1 OKX REST Client Wrapper (`okx_rest.py`) ✅
 Wraps `python-okx` SDK (synchronous) with `asyncio.to_thread()`:
 - `place_order()`, `place_algo_order()` (TP/SL), `cancel_order()`, `close_position()`
 - `get_balance()`, `get_positions()`, `set_leverage()`
@@ -186,26 +186,26 @@ Wraps `python-okx` SDK (synchronous) with `asyncio.to_thread()`:
 - `Position` (instId, posSide, pos, avgPx, upl, lever, liqPx, margin)
 - `AccountState` (equity, available_balance, daily_pnl, max_drawdown_today)
 
-### 2.3 Order Validator 🔲
+### 2.3 Order Validator ✅
 Pre-execution checks: required fields, size > 0, SL/TP logical correctness
 
-### 2.4 Order Executor 🔲
+### 2.4 Order Executor ✅
 1. Validate via OrderValidator
 2. OPEN: set leverage -> place main order -> place TP/SL algo order
 3. CLOSE: close_position()
 4. Publish result to `trade:fills`
 
-### 2.5 OKX Private WebSocket (`ws_private.py`) 🔲
+### 2.5 OKX Private WebSocket (`ws_private.py`) ✅
 - `WsPrivateAsync` from python-okx SDK
 - Channels: orders (SWAP), positions (SWAP), account
 - Demo URL: `wss://wspap.okx.com:8443/ws/v5/private`
 
-### 2.6 Position Manager 🔲
+### 2.6 Position Manager ✅
 - Track positions in `dict[instId:posSide -> Position]`
 - Detect position close when `pos == "0"`
 - Publish updates to `trade:positions`
 
-### 2.7 Trade Server Main Loop 🔲
+### 2.7 Trade Server Main Loop ✅
 1. Initialize OKX REST client
 2. Connect private WebSocket, subscribe channels
 3. Subscribe Redis `trade:orders` stream
@@ -218,8 +218,8 @@ asyncio.gather(indicator_server.start(), trade_server.start())
 ```
 
 ### Verify
-- 🔲 Unit: order validator catches invalid orders
-- 🔲 Unit: order executor flow with mocked OKX API
+- ✅ Unit: order validator catches invalid orders (39 tests)
+- ✅ Unit: order executor flow with mocked OKX API (15 tests)
 - 🔲 Integration: publish `trade:orders` to Redis -> trade server places order on OKX Demo -> `trade:fills` appears
 - 🔲 OKX Demo web UI shows the placed order
 
