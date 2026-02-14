@@ -2,6 +2,7 @@
 
 import asyncio
 import signal
+import sys
 
 import structlog
 
@@ -36,8 +37,12 @@ async def main() -> None:
         logger.info("shutdown_signal_received")
         asyncio.ensure_future(bot.stop())
 
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, _signal_handler)
+    # Windows does not support loop.add_signal_handler; use try/except fallback
+    if sys.platform != "win32":
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, _signal_handler)
+    else:
+        signal.signal(signal.SIGINT, lambda *_: _signal_handler())
 
     try:
         await bot.start()
