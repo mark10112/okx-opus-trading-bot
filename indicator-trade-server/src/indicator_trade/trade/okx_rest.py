@@ -238,8 +238,8 @@ class OKXRestClient:
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             return FundingRate(
-                current=float(d.get("fundingRate", 0)),
-                predicted=float(d.get("nextFundingRate", 0)),
+                current=float(d.get("fundingRate") or 0),
+                predicted=float(d.get("nextFundingRate") or 0),
             )
         return FundingRate()
 

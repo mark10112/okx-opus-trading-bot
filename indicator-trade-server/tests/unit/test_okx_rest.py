@@ -346,6 +346,35 @@ class TestGetFundingRate:
         assert funding.predicted == 0.0002
 
 
+    @pytest.mark.asyncio
+    async def test_get_funding_rate_empty_string(self, rest_client: OKXRestClient) -> None:
+        """Regression: OKX sometimes returns '' for nextFundingRate."""
+        rest_client._public_api = MagicMock()
+        rest_client._public_api.get_funding_rate = MagicMock(
+            return_value={
+                "code": "0",
+                "data": [{"fundingRate": "0.0001", "nextFundingRate": ""}],
+            }
+        )
+        funding = await rest_client.get_funding_rate("BTC-USDT-SWAP")
+        assert funding.current == 0.0001
+        assert funding.predicted == 0.0  # empty string should default to 0
+
+    @pytest.mark.asyncio
+    async def test_get_funding_rate_both_empty(self, rest_client: OKXRestClient) -> None:
+        """Regression: both funding rate fields empty."""
+        rest_client._public_api = MagicMock()
+        rest_client._public_api.get_funding_rate = MagicMock(
+            return_value={
+                "code": "0",
+                "data": [{"fundingRate": "", "nextFundingRate": ""}],
+            }
+        )
+        funding = await rest_client.get_funding_rate("BTC-USDT-SWAP")
+        assert funding.current == 0.0
+        assert funding.predicted == 0.0
+
+
 class TestGetOpenInterest:
     @pytest.mark.asyncio
     async def test_get_open_interest_success(self, rest_client: OKXRestClient) -> None:
