@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -54,9 +53,7 @@ class TestSubscribeCandles:
         # Should register callbacks for candle channels
         assert len(ws._callbacks) > 0
 
-    async def test_subscribe_candles_creates_correct_channels(
-        self, ws: OKXPublicWS
-    ) -> None:
+    async def test_subscribe_candles_creates_correct_channels(self, ws: OKXPublicWS) -> None:
         callback = AsyncMock()
         ws._ws = MagicMock()
         ws._ws.subscribe = MagicMock()
@@ -134,10 +131,12 @@ class TestOnMessage:
         callback = AsyncMock()
         ws._callbacks["candle1H"] = callback
 
-        message = json.dumps({
-            "arg": {"channel": "candle1H", "instId": "BTC-USDT-SWAP"},
-            "data": [["1234567890000", "100", "105", "95", "102", "1000"]],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "candle1H", "instId": "BTC-USDT-SWAP"},
+                "data": [["1234567890000", "100", "105", "95", "102", "1000"]],
+            }
+        )
         await ws._on_message(message)
 
         callback.assert_awaited_once()
@@ -146,20 +145,24 @@ class TestOnMessage:
         callback = AsyncMock()
         ws._callbacks["tickers"] = callback
 
-        message = json.dumps({
-            "arg": {"channel": "tickers", "instId": "BTC-USDT-SWAP"},
-            "data": [{"last": "100.0", "askPx": "100.1", "bidPx": "99.9"}],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "tickers", "instId": "BTC-USDT-SWAP"},
+                "data": [{"last": "100.0", "askPx": "100.1", "bidPx": "99.9"}],
+            }
+        )
         await ws._on_message(message)
 
         callback.assert_awaited_once()
 
     async def test_ignores_unknown_channel(self, ws: OKXPublicWS) -> None:
         """Should not raise on unknown channel."""
-        message = json.dumps({
-            "arg": {"channel": "unknown_channel", "instId": "BTC-USDT-SWAP"},
-            "data": [],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "unknown_channel", "instId": "BTC-USDT-SWAP"},
+                "data": [],
+            }
+        )
         await ws._on_message(message)  # Should not raise
 
     async def test_ignores_non_data_messages(self, ws: OKXPublicWS) -> None:
@@ -182,7 +185,7 @@ class TestReconnect:
 
         with patch.object(ws, "connect", new_callable=AsyncMock) as mock_connect:
             mock_connect.side_effect = [ConnectionError("fail"), None]
-            with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            with patch("asyncio.sleep", new_callable=AsyncMock):
                 await ws._reconnect()
 
                 # Should have attempted reconnect

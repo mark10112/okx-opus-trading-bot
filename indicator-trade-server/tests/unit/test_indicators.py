@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -15,9 +15,7 @@ from indicator_trade.models.indicator_set import IndicatorSet
 def _make_ohlcv_df(rows: int = 200, base_price: float = 100.0) -> pd.DataFrame:
     """Generate a realistic OHLCV DataFrame for testing."""
     np.random.seed(42)
-    dates = pd.date_range(
-        end=datetime.now(timezone.utc), periods=rows, freq="1h"
-    )
+    dates = pd.date_range(end=datetime.now(timezone.utc), periods=rows, freq="1h")
     close = base_price + np.cumsum(np.random.randn(rows) * 0.5)
     high = close + np.abs(np.random.randn(rows) * 0.3)
     low = close - np.abs(np.random.randn(rows) * 0.3)
@@ -61,16 +59,12 @@ class TestCompute:
         result = indicators.compute(sample_df)
         assert isinstance(result, IndicatorSet)
 
-    def test_rsi_in_range(
-        self, indicators: TechnicalIndicators, sample_df: pd.DataFrame
-    ) -> None:
+    def test_rsi_in_range(self, indicators: TechnicalIndicators, sample_df: pd.DataFrame) -> None:
         result = indicators.compute(sample_df)
         assert result.rsi is not None
         assert 0.0 <= result.rsi <= 100.0
 
-    def test_macd_populated(
-        self, indicators: TechnicalIndicators, sample_df: pd.DataFrame
-    ) -> None:
+    def test_macd_populated(self, indicators: TechnicalIndicators, sample_df: pd.DataFrame) -> None:
         result = indicators.compute(sample_df)
         assert result.macd is not None
         assert isinstance(result.macd.line, float)
@@ -84,9 +78,7 @@ class TestCompute:
         assert result.bollinger is not None
         assert result.bollinger.lower <= result.bollinger.middle <= result.bollinger.upper
 
-    def test_ema_values(
-        self, indicators: TechnicalIndicators, sample_df: pd.DataFrame
-    ) -> None:
+    def test_ema_values(self, indicators: TechnicalIndicators, sample_df: pd.DataFrame) -> None:
         result = indicators.compute(sample_df)
         assert 20 in result.ema
         assert 50 in result.ema
@@ -94,23 +86,17 @@ class TestCompute:
         for period, val in result.ema.items():
             assert isinstance(val, float)
 
-    def test_atr_positive(
-        self, indicators: TechnicalIndicators, sample_df: pd.DataFrame
-    ) -> None:
+    def test_atr_positive(self, indicators: TechnicalIndicators, sample_df: pd.DataFrame) -> None:
         result = indicators.compute(sample_df)
         assert result.atr is not None
         assert result.atr > 0.0
 
-    def test_vwap_populated(
-        self, indicators: TechnicalIndicators, sample_df: pd.DataFrame
-    ) -> None:
+    def test_vwap_populated(self, indicators: TechnicalIndicators, sample_df: pd.DataFrame) -> None:
         result = indicators.compute(sample_df)
         assert result.vwap is not None
         assert isinstance(result.vwap, float)
 
-    def test_adx_in_range(
-        self, indicators: TechnicalIndicators, sample_df: pd.DataFrame
-    ) -> None:
+    def test_adx_in_range(self, indicators: TechnicalIndicators, sample_df: pd.DataFrame) -> None:
         result = indicators.compute(sample_df)
         assert result.adx is not None
         assert 0.0 <= result.adx <= 100.0
@@ -123,9 +109,7 @@ class TestCompute:
         assert 0.0 <= result.stoch_rsi.k <= 100.0
         assert 0.0 <= result.stoch_rsi.d <= 100.0
 
-    def test_obv_populated(
-        self, indicators: TechnicalIndicators, sample_df: pd.DataFrame
-    ) -> None:
+    def test_obv_populated(self, indicators: TechnicalIndicators, sample_df: pd.DataFrame) -> None:
         result = indicators.compute(sample_df)
         assert result.obv is not None
         assert isinstance(result.obv, float)
@@ -195,9 +179,7 @@ class TestInsufficientData:
         # RSI needs 14 periods, so should be None with 5 rows
         assert result.rsi is None
 
-    def test_empty_df_returns_default_indicator_set(
-        self, indicators: TechnicalIndicators
-    ) -> None:
+    def test_empty_df_returns_default_indicator_set(self, indicators: TechnicalIndicators) -> None:
         empty_df = pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
         result = indicators.compute(empty_df)
         assert isinstance(result, IndicatorSet)

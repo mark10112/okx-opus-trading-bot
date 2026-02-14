@@ -54,10 +54,7 @@ def sample_candle() -> Candle:
 @pytest.fixture
 def sample_candles() -> list[Candle]:
     now = datetime.now(timezone.utc)
-    return [
-        _make_candle(ts=now - timedelta(hours=i), close=float(100 + i))
-        for i in range(10)
-    ]
+    return [_make_candle(ts=now - timedelta(hours=i), close=float(100 + i)) for i in range(10)]
 
 
 # --- DataFrame helpers ---

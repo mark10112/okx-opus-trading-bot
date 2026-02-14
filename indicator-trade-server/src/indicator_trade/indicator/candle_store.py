@@ -55,9 +55,7 @@ class CandleStore:
             return None
         return dq[-1]
 
-    def get_as_dataframe(
-        self, instrument: str, timeframe: str, limit: int = 100
-    ) -> pd.DataFrame:
+    def get_as_dataframe(self, instrument: str, timeframe: str, limit: int = 100) -> pd.DataFrame:
         """
         Convert candles to pandas DataFrame for pandas-ta:
         columns: ['open', 'high', 'low', 'close', 'volume']
@@ -79,9 +77,7 @@ class CandleStore:
         df = pd.DataFrame(data, index=pd.DatetimeIndex([c.time for c in candles]))
         return df
 
-    async def backfill(
-        self, instrument: str, timeframe: str, candles: list[Candle]
-    ) -> None:
+    async def backfill(self, instrument: str, timeframe: str, candles: list[Candle]) -> None:
         """Bulk insert historical candles to memory + DB."""
         for candle in candles:
             self.candles[instrument][timeframe].append(candle)

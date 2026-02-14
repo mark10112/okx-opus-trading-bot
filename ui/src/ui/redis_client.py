@@ -84,9 +84,7 @@ class RedisClient:
 
                 for stream_bytes, messages in results:
                     stream_name = (
-                        stream_bytes.decode()
-                        if isinstance(stream_bytes, bytes)
-                        else stream_bytes
+                        stream_bytes.decode() if isinstance(stream_bytes, bytes) else stream_bytes
                     )
                     for msg_id, data in messages:
                         try:
@@ -118,9 +116,7 @@ class RedisClient:
         """Create consumer group, ignore if already exists."""
         assert self.client is not None
         try:
-            await self.client.xgroup_create(
-                stream, self.consumer_group, id="0", mkstream=True
-            )
+            await self.client.xgroup_create(stream, self.consumer_group, id="0", mkstream=True)
             logger.debug("redis_group_created", stream=stream, group=self.consumer_group)
         except aioredis.ResponseError as e:
             if "BUSYGROUP" not in str(e):

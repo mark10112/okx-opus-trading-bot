@@ -55,7 +55,9 @@ class IndicatorServer:
             engine = create_db_engine(self.settings.DATABASE_URL)
             session_factory = create_session_factory(engine)
             repo = CandleRepository(session_factory)
-            self._candle_store = CandleStore(db_repo=repo, max_candles=self.settings.CANDLE_HISTORY_LIMIT)
+            self._candle_store = CandleStore(
+                db_repo=repo, max_candles=self.settings.CANDLE_HISTORY_LIMIT
+            )
 
         indicators = TechnicalIndicators()
         regime_detector = RegimeDetector()
@@ -100,9 +102,7 @@ class IndicatorServer:
                         count=len(candles) if candles else 0,
                     )
                 except Exception:
-                    logger.exception(
-                        "backfill_failed", instrument=instrument, timeframe=tf
-                    )
+                    logger.exception("backfill_failed", instrument=instrument, timeframe=tf)
 
     async def _fetch_candles_rest(
         self, instrument: str, timeframe: str, limit: int = 200
@@ -145,15 +145,9 @@ class IndicatorServer:
                 self.settings.TIMEFRAMES,
                 self._on_candle,
             )
-            await self._ws.subscribe_tickers(
-                self.settings.INSTRUMENTS, self._on_ticker
-            )
-            await self._ws.subscribe_orderbook(
-                self.settings.INSTRUMENTS, self._on_orderbook
-            )
-            await self._ws.subscribe_funding(
-                self.settings.INSTRUMENTS, self._on_funding
-            )
+            await self._ws.subscribe_tickers(self.settings.INSTRUMENTS, self._on_ticker)
+            await self._ws.subscribe_orderbook(self.settings.INSTRUMENTS, self._on_orderbook)
+            await self._ws.subscribe_funding(self.settings.INSTRUMENTS, self._on_funding)
             logger.info("ws_subscriptions_complete")
         except Exception:
             logger.exception("ws_subscribe_failed")
@@ -261,9 +255,7 @@ class IndicatorServer:
         from okx.MarketData import MarketAPI
 
         api = MarketAPI(flag=self.settings.OKX_FLAG)
-        result = await asyncio.to_thread(
-            api.get_orderbook, instId=instrument, sz="5"
-        )
+        result = await asyncio.to_thread(api.get_orderbook, instId=instrument, sz="5")
 
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
@@ -273,8 +265,11 @@ class IndicatorServer:
             bid_depth = sum(b[1] for b in bids)
             ask_depth = sum(a[1] for a in asks)
             return OrderBook(
-                bids=bids, asks=asks, spread=spread,
-                bid_depth=bid_depth, ask_depth=ask_depth,
+                bids=bids,
+                asks=asks,
+                spread=spread,
+                bid_depth=bid_depth,
+                ask_depth=ask_depth,
             )
         return OrderBook()
 
@@ -283,9 +278,7 @@ class IndicatorServer:
         from okx.PublicData import PublicAPI
 
         api = PublicAPI(flag=self.settings.OKX_FLAG)
-        result = await asyncio.to_thread(
-            api.get_funding_rate, instId=instrument
-        )
+        result = await asyncio.to_thread(api.get_funding_rate, instId=instrument)
 
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
@@ -300,9 +293,7 @@ class IndicatorServer:
         from okx.PublicData import PublicAPI
 
         api = PublicAPI(flag=self.settings.OKX_FLAG)
-        result = await asyncio.to_thread(
-            api.get_open_interest, instType="SWAP", instId=instrument
-        )
+        result = await asyncio.to_thread(api.get_open_interest, instType="SWAP", instId=instrument)
 
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
@@ -315,19 +306,23 @@ class IndicatorServer:
 
         # Large price change (>3% in 1H)
         if abs(snapshot.price_change_1h) > ANOMALY_PRICE_CHANGE_THRESHOLD:
-            alerts.append({
-                "type": "price_anomaly",
-                "message": f"Large 1H price change: {snapshot.price_change_1h:.2f}%",
-                "severity": "WARN",
-            })
+            alerts.append(
+                {
+                    "type": "price_anomaly",
+                    "message": f"Large 1H price change: {snapshot.price_change_1h:.2f}%",
+                    "severity": "WARN",
+                }
+            )
 
         # Funding rate spike (>0.05%)
         if abs(snapshot.funding_rate.current) > ANOMALY_FUNDING_THRESHOLD:
-            alerts.append({
-                "type": "funding_spike",
-                "message": f"High funding rate: {snapshot.funding_rate.current:.4f}",
-                "severity": "WARN",
-            })
+            alerts.append(
+                {
+                    "type": "funding_spike",
+                    "message": f"High funding rate: {snapshot.funding_rate.current:.4f}",
+                    "severity": "WARN",
+                }
+            )
 
         for alert in alerts:
             msg = MarketAlertMessage(payload=alert)
