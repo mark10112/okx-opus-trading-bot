@@ -209,7 +209,7 @@ async def test_cycle_open_long_publishes_order(session_factory, real_redis, clea
 
 
 async def test_cycle_journals_trade(session_factory, real_redis, clean_tables):
-    """After OPEN_LONG, trade record saved to DB via mock trade_repo."""
+    """After OPEN_LONG, trade record saved to real DB."""
     orch = await _make_orchestrator(session_factory)
     try:
         await _seed_snapshot(orch.redis)
@@ -228,22 +228,25 @@ async def test_cycle_journals_trade(session_factory, real_redis, clean_tables):
         orch.prompt_builder = mock_prompt
         orch.playbook_manager = mock_playbook
 
-        # Use mock trade_repo to capture the journaling call
-        # (real TradeORM rejects extra fields like 'reasoning', 'fill_data')
-        mock_trade_repo = AsyncMock()
-        mock_trade_repo.create = AsyncMock(return_value="test-trade-id")
-        mock_trade_repo.get_recent_closed = AsyncMock(return_value=[])
-        orch.trade_repo = mock_trade_repo
+        # Use real trade_repo (bug fixed: correct field names now)
+        from orchestrator.db.repository import TradeRepository
+
+        trade_repo = TradeRepository(session_factory)
+        trade_repo.get_recent_closed = AsyncMock(return_value=[])
+        orch.trade_repo = trade_repo
 
         await orch._run_cycle("BTC-USDT-SWAP")
 
-        # Verify trade_repo.create was called with correct fields
-        mock_trade_repo.create.assert_called_once()
-        trade_data = mock_trade_repo.create.call_args[0][0]
-        assert trade_data["symbol"] == "BTC-USDT-SWAP"
-        assert trade_data["direction"] == "OPEN_LONG"
-        assert trade_data["strategy_used"] == "momentum"
-        assert trade_data["confidence_at_entry"] == 0.85
+        # Verify trade was persisted to real DB
+        open_trades = await trade_repo.get_open()
+        matching = [t for t in open_trades if t.symbol == "BTC-USDT-SWAP"]
+        assert len(matching) >= 1
+        trade = matching[0]
+        assert trade.direction == "LONG"
+        assert trade.strategy_used == "momentum"
+        assert trade.confidence_at_entry == 0.85
+        assert trade.opus_reasoning == "Strong uptrend with RSI confirmation"
+        assert trade.status == "open"
         assert orch.state == OrchestratorState.IDLE
     finally:
         await orch.redis.disconnect()
