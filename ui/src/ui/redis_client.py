@@ -108,6 +108,14 @@ class RedisClient:
                             )
             except asyncio.CancelledError:
                 break
+            except aioredis.ResponseError as e:
+                if "NOGROUP" in str(e):
+                    logger.warning("redis_nogroup_recreating", streams=streams)
+                    for s in streams:
+                        await self.create_consumer_group(s)
+                else:
+                    logger.exception("redis_subscribe_error")
+                    await asyncio.sleep(1)
             except Exception:
                 logger.exception("redis_subscribe_error")
                 await asyncio.sleep(1)
