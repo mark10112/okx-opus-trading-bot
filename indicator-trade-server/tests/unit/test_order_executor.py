@@ -34,9 +34,7 @@ def _make_request(**overrides) -> OrderRequest:
 def mock_rest_client() -> AsyncMock:
     client = AsyncMock()
     client.set_leverage = AsyncMock(return_value={"code": "0", "data": [{"lever": "3"}]})
-    client.place_order = AsyncMock(
-        return_value=OrderResult(success=True, ord_id="ord-123")
-    )
+    client.place_order = AsyncMock(return_value=OrderResult(success=True, ord_id="ord-123"))
     client.place_algo_order = AsyncMock(
         return_value={"code": "0", "data": [{"algoId": "algo-1", "sCode": "0"}]}
     )
@@ -92,9 +90,7 @@ class TestOpenFlow:
         self, executor: OrderExecutor, mock_rest_client: AsyncMock
     ) -> None:
         await executor.execute(_make_request(action="OPEN_LONG", leverage="3"))
-        mock_rest_client.set_leverage.assert_called_once_with(
-            "BTC-USDT-SWAP", "3"
-        )
+        mock_rest_client.set_leverage.assert_called_once_with("BTC-USDT-SWAP", "3")
 
     @pytest.mark.asyncio
     async def test_open_long_places_main_order(
@@ -108,9 +104,7 @@ class TestOpenFlow:
     async def test_open_long_places_algo_order_with_sl_tp(
         self, executor: OrderExecutor, mock_rest_client: AsyncMock
     ) -> None:
-        request = _make_request(
-            action="OPEN_LONG", stop_loss="49000", take_profit="55000"
-        )
+        request = _make_request(action="OPEN_LONG", stop_loss="49000", take_profit="55000")
         await executor.execute(request)
         mock_rest_client.place_algo_order.assert_called_once()
         call_kwargs = mock_rest_client.place_algo_order.call_args[1]
@@ -129,9 +123,7 @@ class TestOpenFlow:
     async def test_open_short_sets_leverage(
         self, executor: OrderExecutor, mock_rest_client: AsyncMock
     ) -> None:
-        await executor.execute(
-            _make_request(action="OPEN_SHORT", side="sell", pos_side="short")
-        )
+        await executor.execute(_make_request(action="OPEN_SHORT", side="sell", pos_side="short"))
         mock_rest_client.set_leverage.assert_called_once()
 
     @pytest.mark.asyncio
@@ -157,21 +149,15 @@ class TestCloseFlow:
     ) -> None:
         result = await executor.execute(_make_request(action="CLOSE"))
         assert result.success is True
-        mock_rest_client.close_position.assert_called_once_with(
-            "BTC-USDT-SWAP", "cross", "long"
-        )
+        mock_rest_client.close_position.assert_called_once_with("BTC-USDT-SWAP", "cross", "long")
         mock_rest_client.place_order.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_close_short_position(
         self, executor: OrderExecutor, mock_rest_client: AsyncMock
     ) -> None:
-        await executor.execute(
-            _make_request(action="CLOSE", side="buy", pos_side="short")
-        )
-        mock_rest_client.close_position.assert_called_once_with(
-            "BTC-USDT-SWAP", "cross", "short"
-        )
+        await executor.execute(_make_request(action="CLOSE", side="buy", pos_side="short"))
+        mock_rest_client.close_position.assert_called_once_with("BTC-USDT-SWAP", "cross", "short")
 
     @pytest.mark.asyncio
     async def test_close_api_error(

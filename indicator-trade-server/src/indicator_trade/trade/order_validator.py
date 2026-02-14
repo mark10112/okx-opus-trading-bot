@@ -63,7 +63,9 @@ class OrderValidator:
 
     def _validate_pos_side(self, request: OrderRequest, errors: list[str]) -> None:
         if request.pos_side not in VALID_POS_SIDES:
-            errors.append(f"Invalid pos_side '{request.pos_side}'. Must be one of {VALID_POS_SIDES}")
+            errors.append(
+                f"Invalid pos_side '{request.pos_side}'. Must be one of {VALID_POS_SIDES}"
+            )
 
     def _validate_order_type(self, request: OrderRequest, errors: list[str]) -> None:
         if request.order_type not in VALID_ORDER_TYPES:
@@ -120,13 +122,9 @@ class OrderValidator:
             try:
                 sl = float(request.stop_loss)
                 if is_long and sl >= entry:
-                    errors.append(
-                        f"stop_loss ({sl}) must be < entry ({entry}) for long positions"
-                    )
+                    errors.append(f"stop_loss ({sl}) must be < entry ({entry}) for long positions")
                 elif not is_long and sl <= entry:
-                    errors.append(
-                        f"stop_loss ({sl}) must be > entry ({entry}) for short positions"
-                    )
+                    errors.append(f"stop_loss ({sl}) must be > entry ({entry}) for short positions")
             except (ValueError, TypeError):
                 errors.append(f"stop_loss must be a valid number, got '{request.stop_loss}'")
 
@@ -142,6 +140,4 @@ class OrderValidator:
                         f"take_profit ({tp}) must be < entry ({entry}) for short positions"
                     )
             except (ValueError, TypeError):
-                errors.append(
-                    f"take_profit must be a valid number, got '{request.take_profit}'"
-                )
+                errors.append(f"take_profit must be a valid number, got '{request.take_profit}'")

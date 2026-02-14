@@ -106,9 +106,7 @@ class OKXRestClient:
 
     async def cancel_order(self, instId: str, ordId: str) -> dict:
         """Cancel an existing order."""
-        return await asyncio.to_thread(
-            self._trade_api.cancel_order, instId=instId, ordId=ordId
-        )
+        return await asyncio.to_thread(self._trade_api.cancel_order, instId=instId, ordId=ordId)
 
     async def close_position(self, instId: str, mgnMode: str, posSide: str) -> dict:
         """Close a position."""
@@ -146,9 +144,7 @@ class OKXRestClient:
             for d in result.get("data", []):
                 utime = None
                 if d.get("uTime"):
-                    utime = datetime.fromtimestamp(
-                        int(d["uTime"]) / 1000, tz=timezone.utc
-                    )
+                    utime = datetime.fromtimestamp(int(d["uTime"]) / 1000, tz=timezone.utc)
                 positions.append(
                     Position(
                         instId=d.get("instId", ""),
@@ -219,9 +215,7 @@ class OKXRestClient:
 
     async def get_orderbook(self, instId: str, sz: int = 20) -> OrderBook:
         """Fetch order book."""
-        result = await asyncio.to_thread(
-            self._market_api.get_orderbook, instId=instId, sz=str(sz)
-        )
+        result = await asyncio.to_thread(self._market_api.get_orderbook, instId=instId, sz=str(sz))
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             bids = [(float(b[0]), float(b[1])) for b in d.get("bids", [])]
@@ -230,16 +224,17 @@ class OKXRestClient:
             bid_depth = sum(b[1] for b in bids)
             ask_depth = sum(a[1] for a in asks)
             return OrderBook(
-                bids=bids, asks=asks, spread=spread,
-                bid_depth=bid_depth, ask_depth=ask_depth,
+                bids=bids,
+                asks=asks,
+                spread=spread,
+                bid_depth=bid_depth,
+                ask_depth=ask_depth,
             )
         return OrderBook()
 
     async def get_funding_rate(self, instId: str) -> FundingRate:
         """Fetch current funding rate."""
-        result = await asyncio.to_thread(
-            self._public_api.get_funding_rate, instId=instId
-        )
+        result = await asyncio.to_thread(self._public_api.get_funding_rate, instId=instId)
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             return FundingRate(

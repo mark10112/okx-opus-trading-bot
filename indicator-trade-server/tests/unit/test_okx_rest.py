@@ -254,18 +254,14 @@ class TestGetPositions:
     @pytest.mark.asyncio
     async def test_get_positions_with_instid_filter(self, rest_client: OKXRestClient) -> None:
         rest_client._account_api = MagicMock()
-        rest_client._account_api.get_positions = MagicMock(
-            return_value={"code": "0", "data": []}
-        )
+        rest_client._account_api.get_positions = MagicMock(return_value={"code": "0", "data": []})
         positions = await rest_client.get_positions(instId="BTC-USDT-SWAP")
         assert positions == []
 
     @pytest.mark.asyncio
     async def test_get_positions_empty(self, rest_client: OKXRestClient) -> None:
         rest_client._account_api = MagicMock()
-        rest_client._account_api.get_positions = MagicMock(
-            return_value={"code": "0", "data": []}
-        )
+        rest_client._account_api.get_positions = MagicMock(return_value={"code": "0", "data": []})
         positions = await rest_client.get_positions()
         assert positions == []
 
@@ -307,9 +303,7 @@ class TestGetCandles:
     @pytest.mark.asyncio
     async def test_get_candles_empty(self, rest_client: OKXRestClient) -> None:
         rest_client._market_api = MagicMock()
-        rest_client._market_api.get_candlesticks = MagicMock(
-            return_value={"code": "0", "data": []}
-        )
+        rest_client._market_api.get_candlesticks = MagicMock(return_value={"code": "0", "data": []})
         candles = await rest_client.get_candles("BTC-USDT-SWAP", "1H")
         assert candles == []
 

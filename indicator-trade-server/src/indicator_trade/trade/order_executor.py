@@ -73,9 +73,7 @@ class OrderExecutor:
 
     async def _execute_close(self, request: OrderRequest) -> OrderResult:
         """CLOSE flow: close_position()."""
-        result = await self.rest_client.close_position(
-            request.symbol, "cross", request.pos_side
-        )
+        result = await self.rest_client.close_position(request.symbol, "cross", request.pos_side)
         if result and result.get("code") == "0":
             return OrderResult(success=True, status="closed")
         data = result.get("data", [{}])[0] if result.get("data") else {}

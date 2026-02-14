@@ -153,10 +153,12 @@ class TestMessageRouting:
         callback = AsyncMock()
         ws._callbacks["orders"] = callback
 
-        message = json.dumps({
-            "arg": {"channel": "orders", "instType": "SWAP"},
-            "data": [{"ordId": "123", "state": "filled"}],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "orders", "instType": "SWAP"},
+                "data": [{"ordId": "123", "state": "filled"}],
+            }
+        )
         await ws._on_message(message)
 
         callback.assert_called_once()
@@ -168,10 +170,12 @@ class TestMessageRouting:
         callback = AsyncMock()
         ws._callbacks["positions"] = callback
 
-        message = json.dumps({
-            "arg": {"channel": "positions", "instType": "SWAP"},
-            "data": [{"instId": "BTC-USDT-SWAP", "pos": "1"}],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "positions", "instType": "SWAP"},
+                "data": [{"instId": "BTC-USDT-SWAP", "pos": "1"}],
+            }
+        )
         await ws._on_message(message)
 
         callback.assert_called_once()
@@ -181,10 +185,12 @@ class TestMessageRouting:
         callback = AsyncMock()
         ws._callbacks["account"] = callback
 
-        message = json.dumps({
-            "arg": {"channel": "account"},
-            "data": [{"totalEq": "10000"}],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "account"},
+                "data": [{"totalEq": "10000"}],
+            }
+        )
         await ws._on_message(message)
 
         callback.assert_called_once()
@@ -212,10 +218,12 @@ class TestMessageRouting:
     @pytest.mark.asyncio
     async def test_on_message_unhandled_channel(self, ws: OKXPrivateWS) -> None:
         # No callback registered for "unknown"
-        message = json.dumps({
-            "arg": {"channel": "unknown"},
-            "data": [{}],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "unknown"},
+                "data": [{}],
+            }
+        )
         await ws._on_message(message)  # Should not raise
 
     @pytest.mark.asyncio
@@ -223,10 +231,12 @@ class TestMessageRouting:
         callback = AsyncMock(side_effect=Exception("callback error"))
         ws._callbacks["orders"] = callback
 
-        message = json.dumps({
-            "arg": {"channel": "orders", "instType": "SWAP"},
-            "data": [{"ordId": "123"}],
-        })
+        message = json.dumps(
+            {
+                "arg": {"channel": "orders", "instType": "SWAP"},
+                "data": [{"ordId": "123"}],
+            }
+        )
         await ws._on_message(message)  # Should not raise
 
 

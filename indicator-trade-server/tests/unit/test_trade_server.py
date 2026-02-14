@@ -70,16 +70,12 @@ class TestStartStop:
         mock_ws.subscribe_account = AsyncMock()
         mock_ws.disconnect = AsyncMock()
 
-        with patch(
-            "indicator_trade.trade.server.OKXRestClient"
-        ), patch(
-            "indicator_trade.trade.server.OKXPrivateWS", return_value=mock_ws
-        ), patch(
-            "indicator_trade.trade.server.OrderValidator"
-        ), patch(
-            "indicator_trade.trade.server.OrderExecutor"
-        ), patch(
-            "indicator_trade.trade.server.PositionManager"
+        with (
+            patch("indicator_trade.trade.server.OKXRestClient"),
+            patch("indicator_trade.trade.server.OKXPrivateWS", return_value=mock_ws),
+            patch("indicator_trade.trade.server.OrderValidator"),
+            patch("indicator_trade.trade.server.OrderExecutor"),
+            patch("indicator_trade.trade.server.PositionManager"),
         ):
             # Make subscribe block briefly then stop
             async def fake_subscribe(streams, callback):
@@ -212,9 +208,7 @@ class TestOnOrderUpdate:
 
 class TestOnPositionUpdate:
     @pytest.mark.asyncio
-    async def test_on_position_update_delegates_to_manager(
-        self, server: TradeServer
-    ) -> None:
+    async def test_on_position_update_delegates_to_manager(self, server: TradeServer) -> None:
         mock_pm = AsyncMock()
         mock_pm.update = AsyncMock(
             return_value=Position(instId="BTC-USDT-SWAP", posSide="long", pos=1.0)
