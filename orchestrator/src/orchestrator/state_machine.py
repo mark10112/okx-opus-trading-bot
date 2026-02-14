@@ -11,7 +11,6 @@ import structlog
 
 from orchestrator.models.messages import (
     OpusDecisionMessage,
-    StreamMessage,
     SystemAlertMessage,
     TradeOrderMessage,
 )

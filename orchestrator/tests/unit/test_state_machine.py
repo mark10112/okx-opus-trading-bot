@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import asyncio
-import json
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from orchestrator.config import Settings
 from orchestrator.models.decision import AnalysisResult, Decision, OpusDecision
-from orchestrator.models.reflection import DeepReflectionResult, TradeReview
 from orchestrator.models.research import ResearchResult
 from orchestrator.models.screen_result import ScreenResult
 from orchestrator.state_machine import Orchestrator, OrchestratorState

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from orchestrator.config import Settings
-from orchestrator.models.decision import AnalysisResult, Decision, OpusDecision
+from orchestrator.models.decision import OpusDecision
 from orchestrator.models.reflection import DeepReflectionResult, TradeReview
 from orchestrator.opus_client import OpusClient
 

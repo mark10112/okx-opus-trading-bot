@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
 
 import pytest
 
 from orchestrator.config import Settings
-from orchestrator.risk_gate import RiskCheck, RiskGate, RiskResult
+from orchestrator.risk_gate import RiskGate, RiskResult
 
 
 # ---------------------------------------------------------------------------
