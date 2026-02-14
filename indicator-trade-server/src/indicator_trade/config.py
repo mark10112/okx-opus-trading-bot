@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/trading_bot"
     REDIS_URL: str = "redis://redis:6379"
 
+    # --- DB Pool ---
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_RECYCLE: int = 1800
+    DB_POOL_TIMEOUT: int = 30
+
     # --- Instruments ---
     INSTRUMENTS: list[str] = ["BTC-USDT-SWAP"]
     TIMEFRAMES: list[str] = ["5m", "1H", "4H"]
