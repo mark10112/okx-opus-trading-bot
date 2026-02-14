@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 import structlog
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from indicator_trade.models.candle import Candle
 from indicator_trade.models.order import OrderRequest, OrderResult
@@ -119,9 +120,17 @@ class OKXRestClient:
 
     # --- Account methods ---
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_balance_raw(self):
+        return await asyncio.to_thread(self._account_api.get_account_balance)
+
     async def get_balance(self) -> AccountState:
         """Get account balance and equity."""
-        result = await asyncio.to_thread(self._account_api.get_account_balance)
+        try:
+            result = await self._get_balance_raw()
+        except Exception:
+            logger.exception("get_balance_error")
+            return AccountState()
         if result and result.get("code") == "0" and result.get("data"):
             data = result["data"][0]
             equity = float(data.get("totalEq", 0))
@@ -133,12 +142,20 @@ class OKXRestClient:
             return AccountState(equity=equity, available_balance=available)
         return AccountState()
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_positions_raw(self, **kwargs):
+        return await asyncio.to_thread(self._account_api.get_positions, **kwargs)
+
     async def get_positions(self, instId: str | None = None) -> list[Position]:
         """Get current positions."""
         kwargs = {}
         if instId:
             kwargs["instId"] = instId
-        result = await asyncio.to_thread(self._account_api.get_positions, **kwargs)
+        try:
+            result = await self._get_positions_raw(**kwargs)
+        except Exception:
+            logger.exception("get_positions_error")
+            return []
         positions = []
         if result and result.get("code") == "0":
             for d in result.get("data", []):
@@ -173,14 +190,19 @@ class OKXRestClient:
 
     # --- Market methods ---
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_candles_raw(self, instId: str, bar: str, limit: str):
+        return await asyncio.to_thread(
+            self._market_api.get_candlesticks, instId=instId, bar=bar, limit=limit,
+        )
+
     async def get_candles(self, instId: str, bar: str, limit: int = 200) -> list[Candle]:
         """Fetch historical candles."""
-        result = await asyncio.to_thread(
-            self._market_api.get_candlesticks,
-            instId=instId,
-            bar=bar,
-            limit=str(limit),
-        )
+        try:
+            result = await self._get_candles_raw(instId, bar, str(limit))
+        except Exception:
+            logger.exception("get_candles_error", instId=instId)
+            return []
         candles = []
         if result and result.get("code") == "0":
             for row in reversed(result.get("data", [])):
@@ -198,9 +220,17 @@ class OKXRestClient:
                 )
         return candles
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_ticker_raw(self, instId: str):
+        return await asyncio.to_thread(self._market_api.get_ticker, instId=instId)
+
     async def get_ticker(self, instId: str) -> Ticker:
         """Fetch latest ticker."""
-        result = await asyncio.to_thread(self._market_api.get_ticker, instId=instId)
+        try:
+            result = await self._get_ticker_raw(instId)
+        except Exception:
+            logger.exception("get_ticker_error", instId=instId)
+            return Ticker(symbol=instId, last=0, bid=0, ask=0, volume_24h=0, change_24h=0)
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             return Ticker(
@@ -213,9 +243,17 @@ class OKXRestClient:
             )
         return Ticker(symbol=instId, last=0, bid=0, ask=0, volume_24h=0, change_24h=0)
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_orderbook_raw(self, instId: str, sz: str):
+        return await asyncio.to_thread(self._market_api.get_orderbook, instId=instId, sz=sz)
+
     async def get_orderbook(self, instId: str, sz: int = 20) -> OrderBook:
         """Fetch order book."""
-        result = await asyncio.to_thread(self._market_api.get_orderbook, instId=instId, sz=str(sz))
+        try:
+            result = await self._get_orderbook_raw(instId, str(sz))
+        except Exception:
+            logger.exception("get_orderbook_error", instId=instId)
+            return OrderBook()
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             bids = [(float(b[0]), float(b[1])) for b in d.get("bids", [])]
@@ -232,9 +270,17 @@ class OKXRestClient:
             )
         return OrderBook()
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_funding_rate_raw(self, instId: str):
+        return await asyncio.to_thread(self._public_api.get_funding_rate, instId=instId)
+
     async def get_funding_rate(self, instId: str) -> FundingRate:
         """Fetch current funding rate."""
-        result = await asyncio.to_thread(self._public_api.get_funding_rate, instId=instId)
+        try:
+            result = await self._get_funding_rate_raw(instId)
+        except Exception:
+            logger.exception("get_funding_rate_error", instId=instId)
+            return FundingRate()
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             return FundingRate(
@@ -243,21 +289,37 @@ class OKXRestClient:
             )
         return FundingRate()
 
-    async def get_open_interest(self, instId: str) -> OpenInterest:
-        """Fetch open interest."""
-        result = await asyncio.to_thread(
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_open_interest_raw(self, instId: str):
+        return await asyncio.to_thread(
             self._public_api.get_open_interest, instType="SWAP", instId=instId
         )
+
+    async def get_open_interest(self, instId: str) -> OpenInterest:
+        """Fetch open interest."""
+        try:
+            result = await self._get_open_interest_raw(instId)
+        except Exception:
+            logger.exception("get_open_interest_error", instId=instId)
+            return OpenInterest()
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             return OpenInterest(oi=float(d.get("oi", 0)))
         return OpenInterest()
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _get_taker_volume_raw(self, instId: str, period: str):
+        return await asyncio.to_thread(
+            self._market_api.get_taker_volume, instId=instId, period=period
+        )
+
     async def get_long_short_ratio(self, instId: str) -> float:
         """Fetch long/short ratio from taker volume data."""
-        result = await asyncio.to_thread(
-            self._market_api.get_taker_volume, instId=instId, period="5m"
-        )
+        try:
+            result = await self._get_taker_volume_raw(instId, "5m")
+        except Exception:
+            logger.exception("get_long_short_ratio_error", instId=instId)
+            return 1.0
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             return float(d[3]) if len(d) > 3 else 1.0
@@ -265,9 +327,11 @@ class OKXRestClient:
 
     async def get_taker_volume(self, instId: str) -> float:
         """Fetch taker buy/sell ratio."""
-        result = await asyncio.to_thread(
-            self._market_api.get_taker_volume, instId=instId, period="5m"
-        )
+        try:
+            result = await self._get_taker_volume_raw(instId, "5m")
+        except Exception:
+            logger.exception("get_taker_volume_error", instId=instId)
+            return 1.0
         if result and result.get("code") == "0" and result.get("data"):
             d = result["data"][0]
             return float(d[3]) if len(d) > 3 else 1.0
