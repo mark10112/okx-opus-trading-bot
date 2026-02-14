@@ -1,12 +1,92 @@
 # Environment Setup Guide
 
-## 1. Create `.env` file
+## Secret Management
+
+This project supports two approaches for managing secrets:
+
+### Option A: Doppler (Recommended for Production)
+
+[Doppler](https://www.doppler.com/) is a secrets management platform that injects environment variables at runtime.
+
+**Setup:**
+
+```bash
+# Install Doppler CLI
+brew install dopplerhq/cli/doppler   # macOS
+# or: curl -Ls https://cli.doppler.com/install.sh | sh
+
+# Login
+doppler login
+
+# Setup project (run from repo root)
+doppler setup
+# Select project: okx-opus-trading-bot
+# Select config: dev / staging / prod
+
+# Run any service with Doppler-injected secrets
+doppler run -- python -m orchestrator.main
+doppler run -- python -m indicator_trade.main
+doppler run -- python -m ui.main
+```
+
+**Doppler project structure:**
+
+| Config | Purpose |
+|--------|---------|
+| `dev` | Local development (demo trading) |
+| `staging` | Integration testing |
+| `prod` | Production (real trading — future) |
+
+**All secrets are stored in Doppler, never in `.env` files in production.**
+
+### Option B: SOPS + age (Encrypted `.env` Files)
+
+For teams that prefer file-based secrets, [SOPS](https://github.com/getsops/sops) encrypts `.env` files with [age](https://github.com/FiloSottile/age) keys.
+
+**Setup:**
+
+```bash
+# Install
+brew install sops age   # macOS
+# or: go install github.com/getsops/sops/v3/cmd/sops@latest
+
+# Generate age key (once per developer)
+age-keygen -o ~/.config/sops/age/keys.txt
+# Copy the public key (age1...) and update .sops.yaml
+
+# Encrypt .env file
+sops --encrypt .env > .enc.env
+
+# Decrypt and use
+sops --decrypt .enc.env > .env
+```
+
+**`.sops.yaml` configuration:**
+
+The `.sops.yaml` file in the repo root defines which age public keys can decrypt. Add each team member's public key:
+
+```yaml
+creation_rules:
+  - path_regex: \.enc\.env$
+    age: >-
+      age1abc...your_key_here,age1def...teammate_key_here
+```
+
+**Rules:**
+- `.env` is in `.gitignore` — never committed
+- `.enc.env` is safe to commit (encrypted)
+- Each developer needs their age private key in `~/.config/sops/age/keys.txt`
+
+### Option C: Plain `.env` (Local Dev Only)
 
 ```bash
 cp .env.example .env
+# Edit .env with your real values
 ```
 
-Edit `.env` and fill in your real values:
+**⚠️ Never commit `.env` to git. It is in `.gitignore`.**
+
+## 1. Required Environment Variables
 
 | Variable | Where to get |
 |----------|-------------|
@@ -19,6 +99,17 @@ Edit `.env` and fill in your real values:
 | `TELEGRAM_ADMIN_IDS` | Same as CHAT_ID (JSON array format: `[123456789]`) |
 | `GRAFANA_ADMIN_PASSWORD` | Choose any password for Grafana admin |
 | `GRAFANA_DB_PASSWORD` | Password for read-only `grafana_reader` DB user |
+
+### Optional Tuning Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_POOL_SIZE` | 10 (orch), 5 (others) | SQLAlchemy connection pool size |
+| `DB_MAX_OVERFLOW` | 20 (orch), 10/5 | Max overflow connections |
+| `DB_POOL_RECYCLE` | 1800 | Recycle connections after N seconds |
+| `DB_POOL_TIMEOUT` | 30 | Wait timeout for pool connection |
+| `DECISION_CYCLE_SECONDS` | 300 | Orchestrator cycle interval |
+| `MAX_OPUS_TIMEOUT_SECONDS` | 30 | Opus API call timeout |
 
 ## 2. Run Integration Tests
 
