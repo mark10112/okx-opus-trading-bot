@@ -27,7 +27,13 @@ async def main() -> None:
     from ui.db.queries import DBQueries
     from ui.telegram.bot import TelegramBot
 
-    engine = create_db_engine(settings.DATABASE_URL)
+    engine = create_db_engine(
+        settings.DATABASE_URL,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_recycle=settings.DB_POOL_RECYCLE,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+    )
     db_queries = DBQueries(engine=engine)
     bot = TelegramBot(settings=settings, redis=redis, db_queries=db_queries)
 
@@ -50,6 +56,7 @@ async def main() -> None:
         pass
     finally:
         await redis.disconnect()
+        await engine.dispose()
         logger.info("shutdown_complete")
 
 
