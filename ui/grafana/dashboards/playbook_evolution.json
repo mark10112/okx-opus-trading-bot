@@ -1,12 +1,82 @@
 {
-  "dashboard": {
-    "title": "Playbook Evolution",
-    "uid": "playbook-evolution",
-    "tags": ["trading-bot"],
-    "timezone": "utc",
-    "panels": [],
-    "templating": { "list": [] },
-    "time": { "from": "now-30d", "to": "now" },
-    "refresh": "5m"
-  }
+  "title": "Playbook Evolution",
+  "uid": "playbook-evolution",
+  "tags": ["trading-bot", "ai"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "refresh": "5m",
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Version Timeline",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT version, triggered_by, change_summary, performance_at_update->>'win_rate' AS win_rate, performance_at_update->>'profit_factor' AS profit_factor, created_at FROM playbook_versions WHERE $__timeFilter(created_at) ORDER BY version DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Change Log",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT r.created_at, r.reflection_type, r.old_version, r.new_version, r.playbook_changes, r.output_json->>'lessons_learned' AS lessons FROM reflection_logs r WHERE $__timeFilter(r.created_at) ORDER BY r.created_at DESC LIMIT 30",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Confidence Calibration",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 2, "fillOpacity": 5 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT closed_at AS time, confidence_at_entry AS confidence, CASE WHEN pnl_usd > 0 THEN 1 ELSE 0 END AS win FROM trades WHERE status = 'closed' AND $__timeFilter(closed_at) ORDER BY closed_at",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Lessons",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT r.created_at, r.reflection_type, r.output_json->>'lessons_learned' AS lessons, r.output_json->>'mistakes' AS mistakes, r.output_json->>'improvements' AS improvements FROM reflection_logs r WHERE r.output_json IS NOT NULL AND $__timeFilter(r.created_at) ORDER BY r.created_at DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
 }
