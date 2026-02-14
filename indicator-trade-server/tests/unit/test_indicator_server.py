@@ -78,13 +78,12 @@ class TestInit:
 
 class TestStart:
     async def test_start_sets_running(self, server: IndicatorServer) -> None:
-        """start() should set running=True and call backfill + subscribe + snapshot loop."""
+        """start() should set running=True and call backfill + ws background + snapshot loop."""
         with (
             patch.object(server, "_backfill_candles", new_callable=AsyncMock),
-            patch.object(server, "_subscribe_ws", new_callable=AsyncMock),
+            patch.object(server, "_subscribe_ws_background", new_callable=AsyncMock),
             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
         ):
-            # Make snapshot_loop stop after first check
             mock_loop.side_effect = asyncio.CancelledError()
             try:
                 await server.start()
@@ -96,7 +95,7 @@ class TestStart:
     async def test_start_calls_backfill(self, server: IndicatorServer) -> None:
         with (
             patch.object(server, "_backfill_candles", new_callable=AsyncMock) as mock_backfill,
-            patch.object(server, "_subscribe_ws", new_callable=AsyncMock),
+            patch.object(server, "_subscribe_ws_background", new_callable=AsyncMock),
             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
         ):
             mock_loop.side_effect = asyncio.CancelledError()
@@ -107,10 +106,10 @@ class TestStart:
 
             mock_backfill.assert_awaited_once()
 
-    async def test_start_calls_subscribe_ws(self, server: IndicatorServer) -> None:
+    async def test_start_launches_ws_background_task(self, server: IndicatorServer) -> None:
         with (
             patch.object(server, "_backfill_candles", new_callable=AsyncMock),
-            patch.object(server, "_subscribe_ws", new_callable=AsyncMock) as mock_subscribe,
+            patch.object(server, "_subscribe_ws_background", new_callable=AsyncMock),
             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
         ):
             mock_loop.side_effect = asyncio.CancelledError()
@@ -119,12 +118,13 @@ class TestStart:
             except asyncio.CancelledError:
                 pass
 
-            mock_subscribe.assert_awaited_once()
+            # WS runs as background task, so _ws_task should be set
+            assert server._ws_task is not None
 
     async def test_start_calls_snapshot_loop(self, server: IndicatorServer) -> None:
         with (
             patch.object(server, "_backfill_candles", new_callable=AsyncMock),
-            patch.object(server, "_subscribe_ws", new_callable=AsyncMock),
+            patch.object(server, "_subscribe_ws_background", new_callable=AsyncMock),
             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
         ):
             mock_loop.side_effect = asyncio.CancelledError()
@@ -142,8 +142,16 @@ class TestStart:
 class TestStop:
     async def test_stop_sets_not_running(self, server: IndicatorServer) -> None:
         server.running = True
+        server._ws_task = None
         await server.stop()
         assert server.running is False
+
+    async def test_stop_cancels_ws_task(self, server: IndicatorServer) -> None:
+        server.running = True
+        # Create a long-running task to cancel
+        server._ws_task = asyncio.create_task(asyncio.sleep(999))
+        await server.stop()
+        assert server._ws_task.cancelled()
 
 
 # --- _backfill_candles ---

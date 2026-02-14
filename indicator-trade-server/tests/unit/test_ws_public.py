@@ -45,7 +45,7 @@ class TestSubscribeCandles:
     async def test_subscribe_candles_stores_callback(self, ws: OKXPublicWS) -> None:
         callback = AsyncMock()
         ws._ws = MagicMock()
-        ws._ws.subscribe = MagicMock()
+        ws._ws.subscribe = AsyncMock()
         ws.connected = True
 
         await ws.subscribe_candles(["BTC-USDT-SWAP"], ["5m", "1H"], callback)
@@ -56,7 +56,7 @@ class TestSubscribeCandles:
     async def test_subscribe_candles_creates_correct_channels(self, ws: OKXPublicWS) -> None:
         callback = AsyncMock()
         ws._ws = MagicMock()
-        ws._ws.subscribe = MagicMock()
+        ws._ws.subscribe = AsyncMock()
         ws.connected = True
 
         await ws.subscribe_candles(["BTC-USDT-SWAP"], ["5m", "1H", "4H"], callback)
@@ -75,7 +75,7 @@ class TestSubscribeTickers:
     async def test_subscribe_tickers_stores_callback(self, ws: OKXPublicWS) -> None:
         callback = AsyncMock()
         ws._ws = MagicMock()
-        ws._ws.subscribe = MagicMock()
+        ws._ws.subscribe = AsyncMock()
         ws.connected = True
 
         await ws.subscribe_tickers(["BTC-USDT-SWAP"], callback)
@@ -85,7 +85,7 @@ class TestSubscribeTickers:
     async def test_subscribe_tickers_correct_channel(self, ws: OKXPublicWS) -> None:
         callback = AsyncMock()
         ws._ws = MagicMock()
-        ws._ws.subscribe = MagicMock()
+        ws._ws.subscribe = AsyncMock()
         ws.connected = True
 
         await ws.subscribe_tickers(["BTC-USDT-SWAP"], callback)
@@ -100,7 +100,7 @@ class TestSubscribeOrderbook:
     async def test_subscribe_orderbook_stores_callback(self, ws: OKXPublicWS) -> None:
         callback = AsyncMock()
         ws._ws = MagicMock()
-        ws._ws.subscribe = MagicMock()
+        ws._ws.subscribe = AsyncMock()
         ws.connected = True
 
         await ws.subscribe_orderbook(["BTC-USDT-SWAP"], callback)
@@ -115,7 +115,7 @@ class TestSubscribeFunding:
     async def test_subscribe_funding_stores_callback(self, ws: OKXPublicWS) -> None:
         callback = AsyncMock()
         ws._ws = MagicMock()
-        ws._ws.subscribe = MagicMock()
+        ws._ws.subscribe = AsyncMock()
         ws.connected = True
 
         await ws.subscribe_funding(["BTC-USDT-SWAP"], callback)

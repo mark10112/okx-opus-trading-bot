@@ -67,7 +67,7 @@ class OKXPublicWS:
                 sub = {"channel": channel, "instId": inst}
                 self._subscriptions.append(sub)
                 if self._ws is not None:
-                    self._ws.subscribe([sub], self._ws_callback)
+                    await self._ws.subscribe([sub], self._ws_callback)
         logger.info("ws_subscribed_candles", instruments=instruments, timeframes=timeframes)
 
     async def subscribe_tickers(
@@ -81,7 +81,7 @@ class OKXPublicWS:
             sub = {"channel": "tickers", "instId": inst}
             self._subscriptions.append(sub)
             if self._ws is not None:
-                self._ws.subscribe([sub], self._ws_callback)
+                await self._ws.subscribe([sub], self._ws_callback)
         logger.info("ws_subscribed_tickers", instruments=instruments)
 
     async def subscribe_orderbook(
@@ -95,7 +95,7 @@ class OKXPublicWS:
             sub = {"channel": "books5", "instId": inst}
             self._subscriptions.append(sub)
             if self._ws is not None:
-                self._ws.subscribe([sub], self._ws_callback)
+                await self._ws.subscribe([sub], self._ws_callback)
         logger.info("ws_subscribed_orderbook", instruments=instruments)
 
     async def subscribe_funding(
@@ -109,7 +109,7 @@ class OKXPublicWS:
             sub = {"channel": "funding-rate", "instId": inst}
             self._subscriptions.append(sub)
             if self._ws is not None:
-                self._ws.subscribe([sub], self._ws_callback)
+                await self._ws.subscribe([sub], self._ws_callback)
         logger.info("ws_subscribed_funding", instruments=instruments)
 
     def _ws_callback(self, message: str) -> None:
@@ -157,7 +157,7 @@ class OKXPublicWS:
                 # Re-subscribe all channels
                 if self._ws is not None:
                     for sub in self._subscriptions:
-                        self._ws.subscribe([sub], self._ws_callback)
+                        await self._ws.subscribe([sub], self._ws_callback)
                 self._reconnect_attempts = 0
                 logger.info("ws_reconnected")
                 return

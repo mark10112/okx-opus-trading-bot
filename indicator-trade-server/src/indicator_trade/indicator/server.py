@@ -38,14 +38,16 @@ class IndicatorServer:
         self._candle_store: CandleStore | None = None
         self._snapshot_builder: SnapshotBuilder | None = None
         self._ws: OKXPublicWS | None = None
+        self._ws_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """
         1. Backfill historical candles from REST API (200 candles per TF)
-        2. Subscribe WebSocket channels
+        2. Subscribe WebSocket channels (background task — non-blocking)
         3. Start snapshot_loop (publish every SNAPSHOT_INTERVAL_SECONDS)
         """
         self.running = True
+        self._ws_task = None
         logger.info("indicator_server_starting")
 
         # Initialize components if not already set (allows test injection)
@@ -72,10 +74,10 @@ class IndicatorServer:
         # 1. Backfill
         await self._backfill_candles()
 
-        # 2. Subscribe WS
-        await self._subscribe_ws()
+        # 2. Subscribe WS as background task (start() blocks the event loop)
+        self._ws_task = asyncio.create_task(self._subscribe_ws_background())
 
-        # 3. Snapshot loop
+        # 3. Snapshot loop (runs immediately, doesn't wait for WS)
         await self._snapshot_loop()
 
     async def stop(self) -> None:
@@ -83,6 +85,12 @@ class IndicatorServer:
         self.running = False
         if self._ws is not None:
             await self._ws.disconnect()
+        if self._ws_task is not None and not self._ws_task.done():
+            self._ws_task.cancel()
+            try:
+                await self._ws_task
+            except asyncio.CancelledError:
+                pass
         logger.info("indicator_server_stopped")
 
     async def _backfill_candles(self) -> None:
@@ -135,8 +143,11 @@ class IndicatorServer:
                 )
         return candles
 
-    async def _subscribe_ws(self) -> None:
-        """Connect and subscribe to OKX public WebSocket channels."""
+    async def _subscribe_ws_background(self) -> None:
+        """Connect and subscribe to OKX public WebSocket channels.
+
+        Runs as a background task because WsPublicAsync.start() blocks.
+        """
         self._ws = OKXPublicWS(url=self.settings.WS_PUBLIC_URL)
         try:
             await self._ws.connect()
@@ -149,6 +160,8 @@ class IndicatorServer:
             await self._ws.subscribe_orderbook(self.settings.INSTRUMENTS, self._on_orderbook)
             await self._ws.subscribe_funding(self.settings.INSTRUMENTS, self._on_funding)
             logger.info("ws_subscriptions_complete")
+        except asyncio.CancelledError:
+            raise
         except Exception:
             logger.exception("ws_subscribe_failed")
 
