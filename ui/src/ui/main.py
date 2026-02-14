@@ -2,6 +2,7 @@
 
 import asyncio
 import signal
+import sys
 
 import structlog
 
@@ -26,7 +27,13 @@ async def main() -> None:
     from ui.db.queries import DBQueries
     from ui.telegram.bot import TelegramBot
 
-    engine = create_db_engine(settings.DATABASE_URL)
+    engine = create_db_engine(
+        settings.DATABASE_URL,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_recycle=settings.DB_POOL_RECYCLE,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+    )
     db_queries = DBQueries(engine=engine)
     bot = TelegramBot(settings=settings, redis=redis, db_queries=db_queries)
 
@@ -36,8 +43,12 @@ async def main() -> None:
         logger.info("shutdown_signal_received")
         asyncio.ensure_future(bot.stop())
 
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, _signal_handler)
+    # Windows does not support loop.add_signal_handler; use try/except fallback
+    if sys.platform != "win32":
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, _signal_handler)
+    else:
+        signal.signal(signal.SIGINT, lambda *_: _signal_handler())
 
     try:
         await bot.start()
@@ -45,6 +56,7 @@ async def main() -> None:
         pass
     finally:
         await redis.disconnect()
+        await engine.dispose()
         logger.info("shutdown_complete")
 
 

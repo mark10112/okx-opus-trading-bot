@@ -1,0 +1,23 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.9
+    hooks:
+      - id: ruff
+        args:
+          - indicator-trade-server/src
+          - indicator-trade-server/tests
+          - orchestrator/src
+          - orchestrator/tests
+          - ui/src
+          - ui/tests
+        pass_filenames: false
+      - id: ruff-format
+        args:
+          - --check
+          - indicator-trade-server/src
+          - indicator-trade-server/tests
+          - orchestrator/src
+          - orchestrator/tests
+          - ui/src
+          - ui/tests
+        pass_filenames: false

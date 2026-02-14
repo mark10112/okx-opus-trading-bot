@@ -29,10 +29,16 @@ class RedisClient:
         redis_url: str = "redis://redis:6379",
         consumer_group: str = "indicator_trade",
         consumer_name: str = "indicator-trade-1",
+        socket_timeout: float = 30.0,
+        socket_connect_timeout: float = 10.0,
+        retry_on_timeout: bool = True,
     ) -> None:
         self.redis_url = redis_url
         self.consumer_group = consumer_group
         self.consumer_name = consumer_name
+        self.socket_timeout = socket_timeout
+        self.socket_connect_timeout = socket_connect_timeout
+        self.retry_on_timeout = retry_on_timeout
         self.client: aioredis.Redis | None = None
 
     async def connect(self) -> None:
@@ -41,6 +47,9 @@ class RedisClient:
             self.redis_url,
             decode_responses=False,
             max_connections=20,
+            socket_timeout=self.socket_timeout,
+            socket_connect_timeout=self.socket_connect_timeout,
+            retry_on_timeout=self.retry_on_timeout,
         )
         await self.client.ping()
         logger.info("redis_connected", url=self.redis_url, group=self.consumer_group)
@@ -84,9 +93,7 @@ class RedisClient:
 
                 for stream_bytes, messages in results:
                     stream_name = (
-                        stream_bytes.decode()
-                        if isinstance(stream_bytes, bytes)
-                        else stream_bytes
+                        stream_bytes.decode() if isinstance(stream_bytes, bytes) else stream_bytes
                     )
                     for msg_id, data in messages:
                         try:
@@ -118,9 +125,7 @@ class RedisClient:
         """Create consumer group, ignore if already exists."""
         assert self.client is not None
         try:
-            await self.client.xgroup_create(
-                stream, self.consumer_group, id="0", mkstream=True
-            )
+            await self.client.xgroup_create(stream, self.consumer_group, id="0", mkstream=True)
             logger.debug("redis_group_created", stream=stream, group=self.consumer_group)
         except aioredis.ResponseError as e:
             if "BUSYGROUP" not in str(e):

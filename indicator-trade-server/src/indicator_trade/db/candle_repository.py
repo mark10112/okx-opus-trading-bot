@@ -66,9 +66,7 @@ class CandleRepository:
                 )
             await session.commit()
 
-    async def get_recent(
-        self, symbol: str, timeframe: str, limit: int = 200
-    ) -> list[dict]:
+    async def get_recent(self, symbol: str, timeframe: str, limit: int = 200) -> list[dict]:
         """Get recent candles ordered by time DESC."""
         async with self.session_factory() as session:
             result = await session.execute(

@@ -1,12 +1,124 @@
 {
-  "dashboard": {
-    "title": "System Health",
-    "uid": "system-health",
-    "tags": ["trading-bot"],
-    "timezone": "utc",
-    "panels": [],
-    "templating": { "list": [] },
-    "time": { "from": "now-1d", "to": "now" },
-    "refresh": "30s"
-  }
+  "title": "System Health",
+  "uid": "system-health",
+  "tags": ["trading-bot", "system"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "templating": { "list": [] },
+  "time": { "from": "now-1d", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Bot State",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "IDLE": { "text": "IDLE", "color": "green" }, "HALTED": { "text": "HALTED", "color": "red" }, "COOLDOWN": { "text": "COOLDOWN", "color": "yellow" } } }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT metrics_json->>'bot_state' AS bot_state FROM performance_snapshots ORDER BY created_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Candle Count",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT COUNT(*) AS candle_count FROM candles WHERE $__timeFilter(time)",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "DB Size",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT pg_database_size(current_database()) AS db_size",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Recent Trades Count",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT COUNT(*) AS recent_trades FROM trades WHERE $__timeFilter(opened_at)",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Last Trade Time",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow"
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT EXTRACT(EPOCH FROM opened_at) * 1000 AS last_trade FROM trades ORDER BY opened_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Screener Throughput",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT date_trunc('hour', created_at) AS time, COUNT(*) AS screener_calls, AVG(latency_ms) AS avg_latency_ms FROM screener_logs WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
 }

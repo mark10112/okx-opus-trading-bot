@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/trading_bot"
     REDIS_URL: str = "redis://redis:6379"
 
+    # --- DB Pool ---
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 5
+    DB_POOL_RECYCLE: int = 1800
+    DB_POOL_TIMEOUT: int = 30
+
     # --- Alert Settings ---
     ALERT_ON_TRADE: bool = True
     ALERT_ON_REFLECTION: bool = True
