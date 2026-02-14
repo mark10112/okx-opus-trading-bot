@@ -1,12 +1,156 @@
 {
-  "dashboard": {
-    "title": "Portfolio Overview",
-    "uid": "portfolio-overview",
-    "tags": ["trading-bot"],
-    "timezone": "utc",
-    "panels": [],
-    "templating": { "list": [] },
-    "time": { "from": "now-7d", "to": "now" },
-    "refresh": "1m"
-  }
+  "title": "Portfolio Overview",
+  "uid": "portfolio-overview",
+  "tags": ["trading-bot"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "templating": { "list": [] },
+  "time": { "from": "now-7d", "to": "now" },
+  "refresh": "1m",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Equity Curve",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT created_at AS time, equity FROM performance_snapshots WHERE $__timeFilter(created_at) ORDER BY created_at",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total PnL",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT total_pnl FROM performance_snapshots ORDER BY created_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Win Rate",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.4 },
+              { "color": "green", "value": 0.55 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT win_rate FROM performance_snapshots ORDER BY created_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "barchart",
+      "title": "Daily PnL",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0 }
+            ]
+          },
+          "custom": { "thresholdsStyle": { "mode": "area" } }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT date_trunc('day', closed_at) AS time, SUM(pnl_usd) AS daily_pnl FROM trades WHERE status = 'closed' AND $__timeFilter(closed_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Drawdown",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "fillColor": "red" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT created_at AS time, max_drawdown FROM performance_snapshots WHERE $__timeFilter(created_at) ORDER BY created_at",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Sharpe Ratio",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 2 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT sharpe_ratio FROM performance_snapshots ORDER BY created_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
 }
