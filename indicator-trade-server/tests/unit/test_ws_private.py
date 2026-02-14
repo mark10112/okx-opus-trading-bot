@@ -90,6 +90,7 @@ class TestSubscribeOrders:
     async def test_subscribe_orders_registers_callback(self, ws: OKXPrivateWS) -> None:
         mock_ws_client = MagicMock()
         mock_ws_client.start = AsyncMock()
+        mock_ws_client.subscribe = AsyncMock()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
         await ws.connect()
 
@@ -105,6 +106,7 @@ class TestSubscribeOrders:
     async def test_subscribe_orders_calls_ws_subscribe(self, ws: OKXPrivateWS) -> None:
         mock_ws_client = MagicMock()
         mock_ws_client.start = AsyncMock()
+        mock_ws_client.subscribe = AsyncMock()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
         await ws.connect()
 
@@ -119,6 +121,7 @@ class TestSubscribePositions:
     async def test_subscribe_positions_registers_callback(self, ws: OKXPrivateWS) -> None:
         mock_ws_client = MagicMock()
         mock_ws_client.start = AsyncMock()
+        mock_ws_client.subscribe = AsyncMock()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
         await ws.connect()
 
@@ -134,6 +137,7 @@ class TestSubscribeAccount:
     async def test_subscribe_account_registers_callback(self, ws: OKXPrivateWS) -> None:
         mock_ws_client = MagicMock()
         mock_ws_client.start = AsyncMock()
+        mock_ws_client.subscribe = AsyncMock()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
         await ws.connect()
 
@@ -257,6 +261,7 @@ class TestReconnect:
     async def test_reconnect_resubscribes(self, ws: OKXPrivateWS) -> None:
         mock_ws_client = MagicMock()
         mock_ws_client.start = AsyncMock()
+        mock_ws_client.subscribe = AsyncMock()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
 
         ws._subscriptions = [
