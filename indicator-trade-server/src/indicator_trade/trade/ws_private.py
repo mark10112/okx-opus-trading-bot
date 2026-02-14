@@ -40,7 +40,12 @@ class OKXPrivateWS:
     async def connect(self) -> None:
         """Connect + authenticate with API credentials."""
         self._ws = self._create_ws_client()
-        await self._ws.start()
+        # Don't use start() — it launches consume() before login,
+        # causing OKX to reject the unauthenticated connection.
+        await self._ws.connect()
+        await self._ws.login()
+        await asyncio.sleep(1)  # Wait for login confirmation
+        self._ws.loop.create_task(self._ws.consume())
         self.connected = True
         logger.info("ws_private_connected", url=self.url)
 
@@ -55,6 +60,13 @@ class OKXPrivateWS:
             self._ws = None
         logger.info("ws_private_disconnected")
 
+    async def _send_subscribe(self, sub: dict) -> None:
+        """Send subscribe payload directly (login already done in connect)."""
+        if self._ws is not None:
+            self._ws.callback = self._ws_callback
+            payload = json.dumps({"op": "subscribe", "args": [sub]})
+            await self._ws.websocket.send(payload)
+
     async def subscribe_orders(
         self, instType: str, callback: Callable[[dict], Awaitable[None]]
     ) -> None:
@@ -62,8 +74,7 @@ class OKXPrivateWS:
         self._callbacks["orders"] = callback
         sub = {"channel": "orders", "instType": instType}
         self._subscriptions.append(sub)
-        if self._ws is not None:
-            await self._ws.subscribe([sub], self._ws_callback)
+        await self._send_subscribe(sub)
         logger.info("ws_subscribed_orders", instType=instType)
 
     async def subscribe_positions(
@@ -73,8 +84,7 @@ class OKXPrivateWS:
         self._callbacks["positions"] = callback
         sub = {"channel": "positions", "instType": instType}
         self._subscriptions.append(sub)
-        if self._ws is not None:
-            await self._ws.subscribe([sub], self._ws_callback)
+        await self._send_subscribe(sub)
         logger.info("ws_subscribed_positions", instType=instType)
 
     async def subscribe_account(self, callback: Callable[[dict], Awaitable[None]]) -> None:
@@ -82,8 +92,7 @@ class OKXPrivateWS:
         self._callbacks["account"] = callback
         sub = {"channel": "account"}
         self._subscriptions.append(sub)
-        if self._ws is not None:
-            await self._ws.subscribe([sub], self._ws_callback)
+        await self._send_subscribe(sub)
         logger.info("ws_subscribed_account")
 
     def _ws_callback(self, message: str) -> None:
@@ -132,9 +141,8 @@ class OKXPrivateWS:
         try:
             await self.connect()
             # Re-subscribe all channels
-            if self._ws is not None:
-                for sub in self._subscriptions:
-                    await self._ws.subscribe([sub], self._ws_callback)
+            for sub in self._subscriptions:
+                await self._send_subscribe(sub)
             self._reconnect_attempts = 0
             logger.info("ws_private_reconnected")
         except Exception:
