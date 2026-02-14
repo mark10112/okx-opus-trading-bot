@@ -16,7 +16,7 @@ Build a self-learning AI crypto trading bot using Claude Opus 4.6 as the brain, 
 | 1 | Indicator Server — Market Data Pipeline | ✅ Done | 98 unit tests, all 6 components implemented |
 | 2 | Trade Server — Order Execution | ✅ Done | 127 unit tests, all 6 components implemented |
 | 3 | Orchestrator Core — State Machine, Risk Gate, DB | ✅ Done | 157 unit tests, all 5 components implemented |
-| 4 | Orchestrator AI Integration | 🔲 Not started | Files exist as stubs (`...` bodies) |
+| 4 | Orchestrator AI Integration | ✅ Done | AI components integrated, stubs replaced, orchestrator test suite at 274 passing tests |
 | 5 | Telegram Bot | 🔲 Not started | Files exist as stubs (`...` bodies) |
 | 6 | Grafana Dashboards | 🔲 Not started | 7 JSON files exist but need real panel queries |
 | 7 | Integration Testing & End-to-End | 🔲 Not started | — |
@@ -277,22 +277,22 @@ States: IDLE -> COLLECTING -> SCREENING -> RESEARCHING -> ANALYZING -> RISK_CHEC
 
 ---
 
-## Phase 4: Orchestrator AI Integration 🔲
+## Phase 4: Orchestrator AI Integration ✅
 
-### 4.1 Haiku Screener (`haiku_screener.py`) 🔲
+### 4.1 Haiku Screener (`haiku_screener.py`) ✅
 - `AsyncAnthropic` client, model: `claude-haiku-4-5-20251001`
 - Compact ~500 token prompt: price, RSI, MACD signal, regime, ADX, volume, funding, BB position, EMA alignment
 - Response: `{"signal": bool, "reason": str}`
 - Default to signal=True on parse error
 - Bypass conditions: open position, news window, market anomaly (>3% 1H), funding spike (>0.05%), manual trigger
 
-### 4.2 Prompt Builder (`prompt_builder.py`) 🔲
+### 4.2 Prompt Builder (`prompt_builder.py`) ✅
 - `build_analysis_prompt()`: XML-structured, ~3000 tokens with all data sections
 - `build_post_trade_prompt()`: ~2000 tokens
 - `build_deep_reflection_prompt()`: ~8000 tokens with full performance data
 - `build_research_query()`: contextual query for Perplexity
 
-### 4.3 Opus Client (`opus_client.py`) 🔲
+### 4.3 Opus Client (`opus_client.py`) ✅
 - `AsyncAnthropic` client, model: `claude-opus-4-6`
 - `analyze()`: full trading decision -> `OpusDecision`
 - `reflect_trade()`: post-trade review -> `TradeReview`
@@ -300,19 +300,19 @@ States: IDLE -> COLLECTING -> SCREENING -> RESEARCHING -> ANALYZING -> RISK_CHEC
 - 30s timeout via `asyncio.wait_for()`, default HOLD on timeout
 - Temperature: 0.2 for analysis, 0.3 for reflection
 
-### 4.4 Perplexity Client (`perplexity_client.py`) 🔲
+### 4.4 Perplexity Client (`perplexity_client.py`) ✅
 - `httpx.AsyncClient` POST to `https://api.perplexity.ai/chat/completions`
 - Model: `sonar-pro`
 - 1-hour cache in `research_cache` table
 - Triggers: scheduled news, market anomaly, funding spike, OI change
 
-### 4.5 Reflection Engine (`reflection_engine.py`) 🔲
+### 4.5 Reflection Engine (`reflection_engine.py`) ✅
 - Post-trade: after every position close, Opus reviews the trade
 - Periodic deep: every 20 trades OR 6 hours
 - Deep reflection updates playbook (new version), adjusts strategies/lessons/confidence
 - Performance metrics: win_rate, profit_factor, sharpe, breakdowns by strategy/regime/time
 
-### 4.6 Complete State Machine (replace stubs) 🔲
+### 4.6 Complete State Machine (replace stubs) ✅
 Full decision cycle per instrument:
 1. COLLECTING: read MarketSnapshot from Redis, fetch positions/account from trade server
 2. SCREENING: Haiku screens (unless bypass). Log result. Skip if no signal.
@@ -326,13 +326,13 @@ Full decision cycle per instrument:
 
 Background task: monitor `trade:positions` for closes -> post-trade reflection -> update risk gate
 
-### 4.7 Screener Accuracy Tracking 🔲
+### 4.7 Screener Accuracy Tracking ✅
 After each Opus call triggered by Haiku pass, update screener_log with Opus agreement
 
 ### Verify
-- 🔲 Unit: Haiku prompt construction and response parsing (mock API)
-- 🔲 Unit: prompt builder XML structure
-- 🔲 Integration (mock AI): full cycle with recorded API responses
+- ✅ Unit: Haiku prompt construction and response parsing (mock API)
+- ✅ Unit: prompt builder XML structure
+- ✅ Integration (mock AI): full cycle with recorded API responses
 - 🔲 Live test: single cycle with real APIs against OKX Demo
 - 🔲 Check screener_logs, opus:decisions stream, risk rejection if applicable
 - 🔲 Verify Anthropic usage matches cost estimates
