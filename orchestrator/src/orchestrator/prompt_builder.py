@@ -26,9 +26,7 @@ class PromptBuilder:
         """Build prompt for post-trade reflection (~2000 tokens)."""
         ...
 
-    def build_deep_reflection_prompt(
-        self, trades: list, playbook: dict, performance: dict
-    ) -> str:
+    def build_deep_reflection_prompt(self, trades: list, playbook: dict, performance: dict) -> str:
         """Build prompt for periodic deep reflection (~8000 tokens)."""
         ...
 

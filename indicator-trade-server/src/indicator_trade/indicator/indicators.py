@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import pandas_ta as ta
 import structlog
@@ -200,9 +199,7 @@ class TechnicalIndicators:
             return None
         return float(bbu.iloc[-1]), float(bbm.iloc[-1]), float(bbl.iloc[-1])
 
-    def _compute_ema(
-        self, df: pd.DataFrame, periods: list[int] | None = None
-    ) -> dict[int, float]:
+    def _compute_ema(self, df: pd.DataFrame, periods: list[int] | None = None) -> dict[int, float]:
         if periods is None:
             periods = [20, 50, 200]
         result = {}
@@ -270,8 +267,12 @@ class TechnicalIndicators:
             if not span_last.empty:
                 span_last = span_last.iloc[-1]
                 span_cols = span_df.columns.tolist()
-                senkou_a = float(span_last[span_cols[0]]) if not pd.isna(span_last[span_cols[0]]) else 0.0
-                senkou_b = float(span_last[span_cols[1]]) if not pd.isna(span_last[span_cols[1]]) else 0.0
+                senkou_a = (
+                    float(span_last[span_cols[0]]) if not pd.isna(span_last[span_cols[0]]) else 0.0
+                )
+                senkou_b = (
+                    float(span_last[span_cols[1]]) if not pd.isna(span_last[span_cols[1]]) else 0.0
+                )
             else:
                 senkou_a = 0.0
                 senkou_b = 0.0
@@ -288,9 +289,7 @@ class TechnicalIndicators:
             "chikou": chikou,
         }
 
-    def _compute_support_resistance(
-        self, df: pd.DataFrame
-    ) -> tuple[list[float], list[float]]:
+    def _compute_support_resistance(self, df: pd.DataFrame) -> tuple[list[float], list[float]]:
         if len(df) < 5:
             return [], []
 
@@ -303,13 +302,13 @@ class TechnicalIndicators:
 
         # Classic pivot points from last completed period
         h = float(high.iloc[-2]) if len(df) >= 2 else float(high.iloc[-1])
-        l = float(low.iloc[-2]) if len(df) >= 2 else float(low.iloc[-1])
+        lo = float(low.iloc[-2]) if len(df) >= 2 else float(low.iloc[-1])
         c = float(close.iloc[-2]) if len(df) >= 2 else float(close.iloc[-1])
-        pivot = (h + l + c) / 3.0
-        r1 = 2 * pivot - l
-        r2 = pivot + (h - l)
+        pivot = (h + lo + c) / 3.0
+        r1 = 2 * pivot - lo
+        r2 = pivot + (h - lo)
         s1 = 2 * pivot - h
-        s2 = pivot - (h - l)
+        s2 = pivot - (h - lo)
         levels.extend([pivot, r1, r2, s1, s2])
 
         # Fractal highs/lows (5-bar pattern)

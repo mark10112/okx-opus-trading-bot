@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from collections import deque
 from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pandas as pd
 import pytest
@@ -85,9 +84,7 @@ class TestAdd:
         assert len(store.candles["BTC-USDT-SWAP"]["1H"]) == 1
         assert len(store.candles["ETH-USDT-SWAP"]["1H"]) == 1
 
-    async def test_add_different_timeframes(
-        self, store: CandleStore, mock_repo: AsyncMock
-    ) -> None:
+    async def test_add_different_timeframes(self, store: CandleStore, mock_repo: AsyncMock) -> None:
         c1 = _make_candle(timeframe="1H")
         c2 = _make_candle(timeframe="4H")
         await store.add("BTC-USDT-SWAP", "1H", c1)
@@ -120,9 +117,7 @@ class TestGet:
         result = store.get("BTC-USDT-SWAP", "1H")
         assert result == []
 
-    async def test_get_preserves_order(
-        self, store: CandleStore, mock_repo: AsyncMock
-    ) -> None:
+    async def test_get_preserves_order(self, store: CandleStore, mock_repo: AsyncMock) -> None:
         for i in range(3):
             await store.add("BTC-USDT-SWAP", "1H", _make_candle(close=float(100 + i)))
 
@@ -186,9 +181,7 @@ class TestGetAsDataframe:
         assert len(df) == 0
         assert list(df.columns) == ["open", "high", "low", "close", "volume"]
 
-    async def test_dataframe_respects_limit(
-        self, store: CandleStore, mock_repo: AsyncMock
-    ) -> None:
+    async def test_dataframe_respects_limit(self, store: CandleStore, mock_repo: AsyncMock) -> None:
         for i in range(5):
             await store.add("BTC-USDT-SWAP", "1H", _make_candle(close=float(100 + i)))
 
@@ -200,17 +193,13 @@ class TestGetAsDataframe:
 
 
 class TestBackfill:
-    async def test_backfill_adds_to_memory(
-        self, store: CandleStore, mock_repo: AsyncMock
-    ) -> None:
+    async def test_backfill_adds_to_memory(self, store: CandleStore, mock_repo: AsyncMock) -> None:
         candles = [_make_candle(close=float(100 + i)) for i in range(3)]
         await store.backfill("BTC-USDT-SWAP", "1H", candles)
 
         assert len(store.candles["BTC-USDT-SWAP"]["1H"]) == 3
 
-    async def test_backfill_persists_to_db(
-        self, store: CandleStore, mock_repo: AsyncMock
-    ) -> None:
+    async def test_backfill_persists_to_db(self, store: CandleStore, mock_repo: AsyncMock) -> None:
         candles = [_make_candle(close=float(100 + i)) for i in range(3)]
         await store.backfill("BTC-USDT-SWAP", "1H", candles)
 
@@ -225,9 +214,7 @@ class TestBackfill:
         # max_candles=5
         assert len(store.candles["BTC-USDT-SWAP"]["1H"]) == 5
 
-    async def test_backfill_empty_list(
-        self, store: CandleStore, mock_repo: AsyncMock
-    ) -> None:
+    async def test_backfill_empty_list(self, store: CandleStore, mock_repo: AsyncMock) -> None:
         await store.backfill("BTC-USDT-SWAP", "1H", [])
 
         assert len(store.candles["BTC-USDT-SWAP"]["1H"]) == 0

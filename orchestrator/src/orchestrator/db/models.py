@@ -61,9 +61,7 @@ class TradeORM(Base):
     )
     okx_order_id: Mapped[str | None] = mapped_column(String(50))
     okx_algo_id: Mapped[str | None] = mapped_column(String(50))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
     )
@@ -90,9 +88,7 @@ class PlaybookVersionORM(Base):
         nullable=False,
     )
     performance_at_update: Mapped[dict | None] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     __table_args__ = (Index("idx_playbook_version", version.desc()),)
 
@@ -112,9 +108,7 @@ class ReflectionLogORM(Base):
     playbook_changes: Mapped[dict | None] = mapped_column(JSONB)
     old_version: Mapped[int | None] = mapped_column(Integer)
     new_version: Mapped[int | None] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     __table_args__ = (
         Index("idx_reflection_type", "reflection_type"),
@@ -130,9 +124,7 @@ class ResearchCacheORM(Base):
     response_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     source: Mapped[str] = mapped_column(String(20), default="perplexity")
     ttl_seconds: Mapped[int] = mapped_column(Integer, default=3600)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     __table_args__ = (
         Index("idx_research_query", "query"),
@@ -157,9 +149,7 @@ class PerformanceSnapshotORM(Base):
     max_drawdown: Mapped[float | None] = mapped_column(Numeric(10, 4))
     total_trades: Mapped[int | None] = mapped_column(Integer)
     metrics_json: Mapped[dict | None] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     __table_args__ = (
         Index("idx_perf_type", "snapshot_type"),
@@ -179,9 +169,7 @@ class ScreenerLogORM(Base):
     opus_agreed: Mapped[bool | None] = mapped_column(Boolean)
     tokens_used: Mapped[int | None] = mapped_column(Integer)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     __table_args__ = (
         Index("idx_screener_created", created_at.desc()),
@@ -196,8 +184,6 @@ class RiskRejectionORM(Base):
     decision_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     failed_rules: Mapped[dict] = mapped_column(JSONB, nullable=False)
     account_state: Mapped[dict | None] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     __table_args__ = (Index("idx_risk_created", created_at.desc()),)

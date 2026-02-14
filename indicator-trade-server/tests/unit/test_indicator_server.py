@@ -79,9 +79,11 @@ class TestInit:
 class TestStart:
     async def test_start_sets_running(self, server: IndicatorServer) -> None:
         """start() should set running=True and call backfill + subscribe + snapshot loop."""
-        with patch.object(server, "_backfill_candles", new_callable=AsyncMock) as mock_backfill, \
-             patch.object(server, "_subscribe_ws", new_callable=AsyncMock) as mock_subscribe, \
-             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop:
+        with (
+            patch.object(server, "_backfill_candles", new_callable=AsyncMock),
+            patch.object(server, "_subscribe_ws", new_callable=AsyncMock),
+            patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
+        ):
             # Make snapshot_loop stop after first check
             mock_loop.side_effect = asyncio.CancelledError()
             try:
@@ -92,9 +94,11 @@ class TestStart:
             assert server.running is True
 
     async def test_start_calls_backfill(self, server: IndicatorServer) -> None:
-        with patch.object(server, "_backfill_candles", new_callable=AsyncMock) as mock_backfill, \
-             patch.object(server, "_subscribe_ws", new_callable=AsyncMock), \
-             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop:
+        with (
+            patch.object(server, "_backfill_candles", new_callable=AsyncMock) as mock_backfill,
+            patch.object(server, "_subscribe_ws", new_callable=AsyncMock),
+            patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
+        ):
             mock_loop.side_effect = asyncio.CancelledError()
             try:
                 await server.start()
@@ -104,9 +108,11 @@ class TestStart:
             mock_backfill.assert_awaited_once()
 
     async def test_start_calls_subscribe_ws(self, server: IndicatorServer) -> None:
-        with patch.object(server, "_backfill_candles", new_callable=AsyncMock), \
-             patch.object(server, "_subscribe_ws", new_callable=AsyncMock) as mock_subscribe, \
-             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop:
+        with (
+            patch.object(server, "_backfill_candles", new_callable=AsyncMock),
+            patch.object(server, "_subscribe_ws", new_callable=AsyncMock) as mock_subscribe,
+            patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
+        ):
             mock_loop.side_effect = asyncio.CancelledError()
             try:
                 await server.start()
@@ -116,9 +122,11 @@ class TestStart:
             mock_subscribe.assert_awaited_once()
 
     async def test_start_calls_snapshot_loop(self, server: IndicatorServer) -> None:
-        with patch.object(server, "_backfill_candles", new_callable=AsyncMock), \
-             patch.object(server, "_subscribe_ws", new_callable=AsyncMock), \
-             patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop:
+        with (
+            patch.object(server, "_backfill_candles", new_callable=AsyncMock),
+            patch.object(server, "_subscribe_ws", new_callable=AsyncMock),
+            patch.object(server, "_snapshot_loop", new_callable=AsyncMock) as mock_loop,
+        ):
             mock_loop.side_effect = asyncio.CancelledError()
             try:
                 await server.start()
@@ -173,7 +181,9 @@ class TestBackfill:
 
 
 class TestSnapshotLoop:
-    async def test_snapshot_loop_publishes(self, server: IndicatorServer, mock_redis: AsyncMock) -> None:
+    async def test_snapshot_loop_publishes(
+        self, server: IndicatorServer, mock_redis: AsyncMock
+    ) -> None:
         """Snapshot loop should build snapshot and publish to Redis."""
         server.running = True
 
@@ -184,18 +194,24 @@ class TestSnapshotLoop:
         server._snapshot_builder = mock_snapshot_builder
 
         # Mock REST data fetchers
-        with patch.object(server, "_fetch_ticker", new_callable=AsyncMock) as mock_ticker, \
-             patch.object(server, "_fetch_orderbook", new_callable=AsyncMock) as mock_ob, \
-             patch.object(server, "_fetch_funding", new_callable=AsyncMock) as mock_fund, \
-             patch.object(server, "_fetch_open_interest", new_callable=AsyncMock) as mock_oi, \
-             patch.object(server, "_detect_anomalies", new_callable=AsyncMock) as mock_anomaly, \
-             patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with (
+            patch.object(server, "_fetch_ticker", new_callable=AsyncMock) as mock_ticker,
+            patch.object(server, "_fetch_orderbook", new_callable=AsyncMock) as mock_ob,
+            patch.object(server, "_fetch_funding", new_callable=AsyncMock) as mock_fund,
+            patch.object(server, "_fetch_open_interest", new_callable=AsyncMock) as mock_oi,
+            patch.object(server, "_detect_anomalies", new_callable=AsyncMock),
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
             from indicator_trade.models.ticker import Ticker
             from indicator_trade.models.snapshot import OrderBook, FundingRate, OpenInterest
 
             mock_ticker.return_value = Ticker(
-                symbol="BTC-USDT-SWAP", last=100.0, bid=99.9, ask=100.1,
-                volume_24h=50000.0, change_24h=1.5,
+                symbol="BTC-USDT-SWAP",
+                last=100.0,
+                bid=99.9,
+                ask=100.1,
+                volume_24h=50000.0,
+                change_24h=1.5,
             )
             mock_ob.return_value = OrderBook()
             mock_fund.return_value = FundingRate()

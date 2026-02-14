@@ -145,7 +145,7 @@ class OKXPublicWS:
     async def _reconnect(self) -> None:
         """Auto-reconnect with exponential backoff on disconnect."""
         while True:
-            delay = min(2 ** self._reconnect_attempts, self._max_reconnect_delay)
+            delay = min(2**self._reconnect_attempts, self._max_reconnect_delay)
             logger.info(
                 "ws_reconnecting",
                 attempt=self._reconnect_attempts + 1,
