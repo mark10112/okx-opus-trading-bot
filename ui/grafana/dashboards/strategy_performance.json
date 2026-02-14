@@ -1,12 +1,120 @@
 {
-  "dashboard": {
-    "title": "Strategy Performance",
-    "uid": "strategy-performance",
-    "tags": ["trading-bot"],
-    "timezone": "utc",
-    "panels": [],
-    "templating": { "list": [] },
-    "time": { "from": "now-30d", "to": "now" },
-    "refresh": "5m"
-  }
+  "title": "Strategy Performance",
+  "uid": "strategy-performance",
+  "tags": ["trading-bot"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "refresh": "5m",
+  "panels": [
+    {
+      "id": 1,
+      "type": "barchart",
+      "title": "Win Rate by Strategy",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT strategy_used AS strategy, COUNT(*) FILTER (WHERE pnl_usd > 0)::float / NULLIF(COUNT(*), 0) AS win_rate FROM trades WHERE status = 'closed' AND $__timeFilter(closed_at) GROUP BY strategy_used ORDER BY win_rate DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "barchart",
+      "title": "PnL by Strategy",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT strategy_used AS strategy, SUM(pnl_usd) AS total_pnl FROM trades WHERE status = 'closed' AND $__timeFilter(closed_at) GROUP BY strategy_used ORDER BY total_pnl DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "barchart",
+      "title": "R:R by Strategy",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1.5 },
+              { "color": "green", "value": 2 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT strategy_used AS strategy, CASE WHEN SUM(pnl_usd) FILTER (WHERE pnl_usd < 0) = 0 THEN NULL ELSE ABS(SUM(pnl_usd) FILTER (WHERE pnl_usd > 0) / SUM(pnl_usd) FILTER (WHERE pnl_usd < 0)) END AS reward_risk FROM trades WHERE status = 'closed' AND $__timeFilter(closed_at) GROUP BY strategy_used ORDER BY reward_risk DESC NULLS LAST",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "piechart",
+      "title": "Trade Distribution by Regime",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT market_regime AS regime, COUNT(*) AS trade_count FROM trades WHERE status = 'closed' AND $__timeFilter(closed_at) GROUP BY market_regime ORDER BY trade_count DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Trade Count by Strategy",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT strategy_used AS metric, COUNT(*) AS value FROM trades WHERE status = 'closed' AND $__timeFilter(closed_at) GROUP BY strategy_used ORDER BY value DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
 }
