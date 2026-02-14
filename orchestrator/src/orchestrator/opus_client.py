@@ -7,6 +7,7 @@ import json
 
 import structlog
 from anthropic import AsyncAnthropic
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
 
 from orchestrator.config import Settings
 from orchestrator.models.decision import OpusDecision
@@ -52,17 +53,10 @@ class OpusClient:
         return self._parse_deep_reflection(text)
 
     async def _call(self, system: str, user: str, temperature: float = 0.2) -> str:
-        """Low-level Anthropic API call with timeout."""
+        """Low-level Anthropic API call with timeout. Retries on API errors, not on timeout."""
         try:
-            client = AsyncAnthropic(api_key=self.settings.ANTHROPIC_API_KEY)
             response = await asyncio.wait_for(
-                client.messages.create(
-                    model=self.settings.OPUS_MODEL,
-                    max_tokens=self.settings.OPUS_MAX_TOKENS,
-                    temperature=temperature,
-                    system=system,
-                    messages=[{"role": "user", "content": user}],
-                ),
+                self._call_api(system, user, temperature),
                 timeout=self.settings.MAX_OPUS_TIMEOUT_SECONDS,
             )
             text = response.content[0].text
@@ -74,6 +68,23 @@ class OpusClient:
         except Exception as e:
             logger.warning("opus_error", error=str(e))
             return ""
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_not_exception_type(asyncio.TimeoutError),
+        reraise=True,
+    )
+    async def _call_api(self, system: str, user: str, temperature: float):
+        """Low-level Anthropic API call with retry on transient errors."""
+        client = AsyncAnthropic(api_key=self.settings.ANTHROPIC_API_KEY)
+        return await client.messages.create(
+            model=self.settings.OPUS_MODEL,
+            max_tokens=self.settings.OPUS_MAX_TOKENS,
+            temperature=temperature,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
 
     def _parse_decision(self, text: str) -> OpusDecision:
         """Parse JSON response into OpusDecision. Default HOLD on failure."""

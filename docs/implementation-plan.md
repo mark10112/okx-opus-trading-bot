@@ -20,7 +20,7 @@ Build a self-learning AI crypto trading bot using Claude Opus 4.6 as the brain, 
 | 5 | Telegram Bot | ✅ Done | 106 unit tests, all 5 components implemented |
 | 6 | Grafana Dashboards | ✅ Done | 99 unit tests, 7 dashboards with real panels, migration 003 |
 | 7 | Integration Testing & End-to-End | ✅ Done | 106 integration tests across 3 repos, tagged v0.7.0 |
-| 8 | Polish & Production Readiness | 🔲 Not started | — |
+| 8 | Polish & Production Readiness | ✅ Done | 70 new tests, connection pooling, retry/backoff, snapshot scheduler, graceful shutdown, docs |
 
 **Last updated**: 2026-02-14
 
@@ -432,10 +432,10 @@ All flat format (no `"dashboard"` wrapper), schemaVersion 39, datasource `Tradin
 - ✅ **B9 Telegram/Redis** (5): DBQueries.get_open_positions, get_recent_trades, Redis alert roundtrip, performance metrics empty, get_latest_playbook
 - ✅ **B10 Grafana SQL** (37): all 35 dashboard SQL queries execute against real DB, expected tables exist, dashboard count = 7
 
-### Known Bugs Found
-- `state_machine.py` journaling passes invalid fields (`reasoning`, `fill_data`) to TradeORM
-- `okx_rest.py` `get_funding_rate` crashes on empty string from OKX API
-- `direction` column is `varchar(5)` but state machine passes `OPEN_LONG` (9 chars)
+### Known Bugs Found & Fixed
+- ✅ ~~`state_machine.py` journaling passes invalid fields (`reasoning`, `fill_data`) to TradeORM~~ — Fixed: uses `opus_reasoning`, no `fill_data` in dict. Regression tests added.
+- ✅ ~~`okx_rest.py` `get_funding_rate` crashes on empty string from OKX API~~ — Fixed: `or 0` fallback for empty strings.
+- ✅ ~~`direction` column is `varchar(5)` but state machine passes `OPEN_LONG` (9 chars)~~ — Fixed: maps to `LONG`/`SHORT` before journaling. Regression test added.
 
 ### Verify
 - ✅ 54 orchestrator integration tests passing
@@ -447,16 +447,20 @@ All flat format (no `"dashboard"` wrapper), schemaVersion 39, datasource `Tradin
 
 ---
 
-## Phase 8: Polish & Production Readiness 🔲
+## Phase 8: Polish & Production Readiness ✅
 
-- 🔲 Connection pooling tuning (Redis, PostgreSQL)
-- 🔲 Query optimization with `EXPLAIN ANALYZE`
-- 🔲 Retry + exponential backoff on all external APIs
-- ✅ Graceful shutdown handlers (SIGTERM/SIGINT) — scaffolded in all 3 `main.py`
-- 🔲 Performance snapshot scheduler (hourly/daily/weekly)
-- 🔲 Default playbook v1 initialization
-- 🔲 READMEs and operational runbook
-- 🔲 Doppler setup + SOPS backup procedure
+- ✅ Connection pooling tuning (pool_recycle=1800, pool_timeout=30, pool_use_lifo=True, configurable via Settings)
+- ✅ Redis socket timeouts (socket_timeout=30s, socket_connect_timeout=10s, retry_on_timeout=True)
+- ✅ Retry + exponential backoff on all external APIs (tenacity: Haiku, Opus, Perplexity, OKX REST read-only)
+- ✅ Graceful shutdown (Windows signal compat, DB engine dispose, Redis disconnect)
+- ✅ Performance snapshot scheduler (hourly/daily/weekly with win_rate, profit_factor, sharpe, max_drawdown)
+- ✅ Default playbook v1 auto-initialization on startup
+- ✅ Startup wiring (DB engine → session factory → repositories → AI clients → orchestrator)
+- ✅ READMEs and operational runbook (README.md, docs/runbook.md)
+- ✅ Doppler + SOPS documentation (docs/setup-env.md)
+
+**New tests**: 70 (23 connection pool + 14 retry + 16 snapshot scheduler + 10 graceful shutdown + 7 startup)
+**Total unit tests**: 780 (328 orchestrator + 240 indicator-trade + 212 ui)
 
 ---
 

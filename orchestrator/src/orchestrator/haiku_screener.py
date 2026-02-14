@@ -7,6 +7,7 @@ import time
 
 import structlog
 from anthropic import AsyncAnthropic
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from orchestrator.config import Settings
 from orchestrator.models.screen_result import ScreenResult
@@ -33,13 +34,7 @@ class HaikuScreener:
         prompt = self._build_prompt(snapshot)
         start = time.monotonic()
         try:
-            client = AsyncAnthropic(api_key=self.settings.ANTHROPIC_API_KEY)
-            response = await client.messages.create(
-                model=self.settings.HAIKU_MODEL,
-                max_tokens=self.settings.HAIKU_MAX_TOKENS,
-                system=SCREENER_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-            )
+            response = await self._call_api(prompt)
             elapsed_ms = (time.monotonic() - start) * 1000
             text = response.content[0].text
             tokens = response.usage.input_tokens + response.usage.output_tokens
@@ -63,6 +58,17 @@ class HaikuScreener:
                 tokens_used=0,
                 latency_ms=elapsed_ms,
             )
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _call_api(self, prompt: str):
+        """Low-level Anthropic API call with retry."""
+        client = AsyncAnthropic(api_key=self.settings.ANTHROPIC_API_KEY)
+        return await client.messages.create(
+            model=self.settings.HAIKU_MODEL,
+            max_tokens=self.settings.HAIKU_MAX_TOKENS,
+            system=SCREENER_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
 
     def _build_prompt(self, snapshot: dict) -> str:
         """Build compact prompt from snapshot."""
