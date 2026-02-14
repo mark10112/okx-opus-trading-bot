@@ -1,12 +1,81 @@
 {
-  "dashboard": {
-    "title": "Active Positions",
-    "uid": "active-positions",
-    "tags": ["trading-bot"],
-    "timezone": "utc",
-    "panels": [],
-    "templating": { "list": [] },
-    "time": { "from": "now-1d", "to": "now" },
-    "refresh": "30s"
-  }
+  "title": "Active Positions",
+  "uid": "active-positions",
+  "tags": ["trading-bot"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "templating": { "list": [] },
+  "time": { "from": "now-1d", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Open Trades",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "pnl_pct" },
+            "properties": [
+              { "id": "unit", "value": "percentunit" },
+              { "id": "thresholds", "value": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 0 }] } },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT trade_id, symbol, direction, entry_price, stop_loss, take_profit, size, leverage, strategy_used, market_regime, confidence_at_entry, opened_at FROM trades WHERE status = 'open' ORDER BY opened_at DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Unrealized PnL",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 10 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT COALESCE(SUM(pnl_usd), 0) AS unrealized_pnl FROM trades WHERE status = 'open'",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "SL/TP Distances",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 10 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT symbol, direction, entry_price, stop_loss, take_profit, CASE WHEN direction = 'LONG' THEN ROUND(((entry_price - stop_loss) / entry_price * 100)::numeric, 2) ELSE ROUND(((stop_loss - entry_price) / entry_price * 100)::numeric, 2) END AS sl_distance_pct, CASE WHEN take_profit IS NOT NULL AND direction = 'LONG' THEN ROUND(((take_profit - entry_price) / entry_price * 100)::numeric, 2) WHEN take_profit IS NOT NULL AND direction = 'SHORT' THEN ROUND(((entry_price - take_profit) / entry_price * 100)::numeric, 2) ELSE NULL END AS tp_distance_pct FROM trades WHERE status = 'open' ORDER BY opened_at DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
 }

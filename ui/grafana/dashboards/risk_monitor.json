@@ -1,12 +1,161 @@
 {
-  "dashboard": {
-    "title": "Risk Monitor",
-    "uid": "risk-monitor",
-    "tags": ["trading-bot"],
-    "timezone": "utc",
-    "panels": [],
-    "templating": { "list": [] },
-    "time": { "from": "now-1d", "to": "now" },
-    "refresh": "30s"
-  }
+  "title": "Risk Monitor",
+  "uid": "risk-monitor",
+  "tags": ["trading-bot", "risk"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "templating": { "list": [] },
+  "time": { "from": "now-1d", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "gauge",
+      "title": "Daily Loss",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 0.05,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.02 },
+              { "color": "red", "value": 0.03 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "WITH today AS (SELECT COALESCE(SUM(pnl_usd), 0) AS loss FROM trades WHERE status = 'closed' AND closed_at >= date_trunc('day', NOW()) AND pnl_usd < 0), equity AS (SELECT equity FROM performance_snapshots ORDER BY created_at DESC LIMIT 1) SELECT CASE WHEN equity.equity > 0 THEN ABS(today.loss) / equity.equity ELSE 0 END AS daily_loss_pct FROM today, equity",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "gauge",
+      "title": "Max Drawdown",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 0.15,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.10 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT max_drawdown FROM performance_snapshots ORDER BY created_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Open Positions Count",
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT COUNT(*) AS open_positions FROM trades WHERE status = 'open'",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total Exposure",
+      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.10 },
+              { "color": "red", "value": 0.15 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "WITH exposure AS (SELECT COALESCE(SUM(size_pct), 0) AS total_exposure FROM trades WHERE status = 'open') SELECT total_exposure FROM exposure",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Consecutive Losses",
+      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "WITH recent AS (SELECT pnl_usd, ROW_NUMBER() OVER (ORDER BY closed_at DESC) AS rn FROM trades WHERE status = 'closed'), streak AS (SELECT rn FROM recent WHERE pnl_usd >= 0 ORDER BY rn LIMIT 1) SELECT COALESCE((SELECT rn - 1 FROM streak), (SELECT COUNT(*) FROM recent)) AS consecutive_losses",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Recent Rejections",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "TradingBot-PostgreSQL" },
+          "rawSql": "SELECT created_at, decision_json->>'action' AS action, decision_json->>'symbol' AS symbol, failed_rules, account_state->>'equity' AS equity FROM risk_rejections WHERE $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
 }
