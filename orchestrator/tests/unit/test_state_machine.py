@@ -1,14 +1,19 @@
-"""Unit tests for Orchestrator state machine — stub AI calls, full state logic."""
+"""Unit tests for Orchestrator state machine — AI integration + full state logic."""
 
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from orchestrator.config import Settings
+from orchestrator.models.decision import AnalysisResult, Decision, OpusDecision
+from orchestrator.models.reflection import DeepReflectionResult, TradeReview
+from orchestrator.models.research import ResearchResult
+from orchestrator.models.screen_result import ScreenResult
 from orchestrator.state_machine import Orchestrator, OrchestratorState
 
 
@@ -116,6 +121,53 @@ def mock_news_scheduler():
 
 
 @pytest.fixture
+def mock_haiku_screener():
+    screener = AsyncMock()
+    screener.screen = AsyncMock(return_value=ScreenResult(signal=True, reason="Setup detected"))
+    return screener
+
+
+@pytest.fixture
+def mock_opus_client():
+    opus = AsyncMock()
+    opus.analyze = AsyncMock(return_value=OpusDecision(
+        analysis=AnalysisResult(market_regime="ranging", bias="neutral"),
+        decision=Decision(action="HOLD"),
+        confidence=0.0,
+        strategy_used="",
+        reasoning="No clear setup",
+    ))
+    return opus
+
+
+@pytest.fixture
+def mock_perplexity_client():
+    pplx = AsyncMock()
+    pplx.research = AsyncMock(return_value=ResearchResult(
+        summary="Market stable", sentiment="neutral",
+    ))
+    return pplx
+
+
+@pytest.fixture
+def mock_prompt_builder():
+    builder = MagicMock()
+    builder.build_analysis_prompt.return_value = "analysis prompt"
+    builder.build_research_query.return_value = "research query"
+    builder.build_post_trade_prompt.return_value = "post-trade prompt"
+    builder.build_deep_reflection_prompt.return_value = "deep reflection prompt"
+    return builder
+
+
+@pytest.fixture
+def mock_reflection_engine():
+    engine = AsyncMock()
+    engine.post_trade_reflection = AsyncMock(return_value={"outcome": "win"})
+    engine.periodic_deep_reflection = AsyncMock(return_value={"summary": "Good"})
+    return engine
+
+
+@pytest.fixture
 def orchestrator(
     settings,
     mock_redis,
@@ -126,6 +178,11 @@ def orchestrator(
     mock_screener_repo,
     mock_risk_rejection_repo,
     mock_news_scheduler,
+    mock_haiku_screener,
+    mock_opus_client,
+    mock_perplexity_client,
+    mock_prompt_builder,
+    mock_reflection_engine,
 ):
     orch = Orchestrator(settings=settings, redis=mock_redis)
     orch.risk_gate = mock_risk_gate
@@ -135,6 +192,11 @@ def orchestrator(
     orch.screener_repo = mock_screener_repo
     orch.risk_rejection_repo = mock_risk_rejection_repo
     orch.news_scheduler = mock_news_scheduler
+    orch.haiku_screener = mock_haiku_screener
+    orch.opus_client = mock_opus_client
+    orch.perplexity_client = mock_perplexity_client
+    orch.prompt_builder = mock_prompt_builder
+    orch.reflection_engine = mock_reflection_engine
     return orch
 
 
@@ -404,7 +466,6 @@ class TestLifecycle:
 class TestMainLoop:
     async def test_single_cycle_hold(self, orchestrator, mock_redis):
         """main_loop() should complete one cycle and default to HOLD."""
-        # Setup: snapshot available
         from orchestrator.models.messages import StreamMessage
         snapshot_msg = StreamMessage(
             source="indicator_server",
@@ -417,7 +478,9 @@ class TestMainLoop:
                 "oi_change_4h": 0.02,
             },
         )
-        mock_redis.read_latest.return_value = snapshot_msg
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=snapshot_msg,
+        )
 
         # Run one cycle then stop
         cycle_count = 0
@@ -436,7 +499,9 @@ class TestMainLoop:
 
     async def test_cycle_with_no_snapshot(self, orchestrator, mock_redis):
         """main_loop() should skip cycle when no snapshot available."""
-        mock_redis.read_latest.return_value = None
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=None,
+        )
 
         await orchestrator._run_cycle("BTC-USDT-SWAP")
         # Should stay IDLE, no further processing
@@ -458,3 +523,333 @@ class TestMainLoop:
 
         await orchestrator._run_cycle("BTC-USDT-SWAP")
         assert orchestrator.state == OrchestratorState.COOLDOWN
+
+
+# ---------------------------------------------------------------------------
+# Helper: snapshot message + read_latest router for AI integration tests
+# ---------------------------------------------------------------------------
+
+
+def _make_snapshot_msg():
+    from orchestrator.models.messages import StreamMessage
+    return StreamMessage(
+        source="indicator_server",
+        type="market_snapshot",
+        payload={
+            "ticker": {"symbol": "BTC-USDT-SWAP", "last": 60000.0, "bid": 59999.0, "ask": 60001.0},
+            "indicators": {"1H": {"rsi": 55.0, "adx": 30.0, "bb_position": "middle", "ema_alignment": "bullish", "macd_signal": "bullish"}},
+            "market_regime": "trending_up",
+            "price_change_1h": 0.01,
+            "funding_rate": 0.0001,
+            "oi_change_4h": 0.02,
+        },
+    )
+
+
+def _make_read_latest_router(snapshot_payload=None, positions_payload=None, account_payload=None, fill_payload=None):
+    """Build an async side_effect for redis.read_latest that routes by stream name."""
+    from orchestrator.models.messages import StreamMessage
+
+    async def _router(stream_name):
+        if stream_name == "market:snapshots":
+            if snapshot_payload is None:
+                return None
+            return snapshot_payload if isinstance(snapshot_payload, StreamMessage) else StreamMessage(
+                source="indicator_server", type="market_snapshot", payload=snapshot_payload,
+            )
+        if stream_name == "trade:positions":
+            if positions_payload is None:
+                return None
+            payload = positions_payload if isinstance(positions_payload, dict) else {"positions": positions_payload}
+            return StreamMessage(source="trade_server", type="positions", payload=payload)
+        if stream_name == "trade:account":
+            if account_payload is None:
+                return None
+            return StreamMessage(source="trade_server", type="account", payload=account_payload)
+        if stream_name == "trade:fills":
+            if fill_payload is None:
+                return None
+            return StreamMessage(source="trade_server", type="fill", payload=fill_payload)
+        return None
+
+    return _router
+
+
+# ---------------------------------------------------------------------------
+# AI Integration: Full cycle with mocked AI
+# ---------------------------------------------------------------------------
+
+
+class TestAIIntegrationCycle:
+    async def test_full_cycle_haiku_screen_to_hold(self, orchestrator, mock_redis, mock_haiku_screener, mock_opus_client):
+        """Full cycle: Haiku screens → Opus returns HOLD → no execution."""
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        mock_haiku_screener.screen.assert_awaited_once()
+        mock_opus_client.analyze.assert_awaited_once()
+        assert orchestrator.state == OrchestratorState.IDLE
+
+    async def test_full_cycle_haiku_rejects(self, orchestrator, mock_redis, mock_haiku_screener, mock_opus_client):
+        """Full cycle: Haiku returns signal=False → skip Opus → IDLE."""
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+        )
+        mock_haiku_screener.screen.return_value = ScreenResult(signal=False, reason="No setup")
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        mock_haiku_screener.screen.assert_awaited_once()
+        mock_opus_client.analyze.assert_not_awaited()
+        assert orchestrator.state == OrchestratorState.IDLE
+
+    async def test_full_cycle_open_long_execute(self, orchestrator, mock_redis, mock_opus_client, mock_trade_repo):
+        """Full cycle: Opus returns OPEN_LONG → execute → confirm → journal."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(
+                action="OPEN_LONG",
+                symbol="BTC-USDT-SWAP",
+                size_pct=0.03,
+                entry_price=60000.0,
+                stop_loss=58500.0,
+                take_profit=63000.0,
+            ),
+            confidence=0.75,
+            strategy_used="momentum",
+            reasoning="Strong trend",
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0, "status": "filled"},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        # Should have published trade order
+        publish_calls = mock_redis.publish.call_args_list
+        streams_published = [c[0][0] for c in publish_calls]
+        assert "trade:orders" in streams_published
+        assert "opus:decisions" in streams_published
+        # Should have created trade record
+        mock_trade_repo.create.assert_awaited_once()
+
+    async def test_screener_bypass_on_position(self, orchestrator, mock_redis, mock_haiku_screener, mock_opus_client):
+        """Bypass screener when open positions exist."""
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            positions_payload=[{"instId": "BTC-USDT-SWAP", "pos": "1"}],
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        # Haiku should NOT be called (bypassed)
+        mock_haiku_screener.screen.assert_not_awaited()
+        # Opus should still be called
+        mock_opus_client.analyze.assert_awaited_once()
+
+    async def test_screener_accuracy_tracking(self, orchestrator, mock_redis, mock_haiku_screener, mock_opus_client, mock_screener_repo):
+        """After Opus call triggered by Haiku pass, update screener_log with opus_agreed."""
+        mock_haiku_screener.screen.return_value = ScreenResult(signal=True, reason="Setup", tokens_used=50)
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(action="OPEN_LONG", symbol="BTC-USDT-SWAP", size_pct=0.03, entry_price=60000.0, stop_loss=58500.0, take_profit=63000.0),
+            confidence=0.75,
+            strategy_used="momentum",
+            reasoning="Agree with screener",
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0, "status": "filled"},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        # Screener log should be updated with opus agreement
+        mock_screener_repo.update_opus_agreement.assert_awaited_once()
+
+    async def test_research_called_on_anomaly(self, orchestrator, mock_redis, mock_perplexity_client, mock_prompt_builder):
+        """Perplexity should be called when price anomaly detected."""
+        from orchestrator.models.messages import StreamMessage
+        anomaly_snapshot = StreamMessage(
+            source="indicator_server",
+            type="market_snapshot",
+            payload={
+                "ticker": {"symbol": "BTC-USDT-SWAP", "last": 60000.0},
+                "indicators": {},
+                "market_regime": "volatile",
+                "price_change_1h": 0.05,
+                "funding_rate": 0.0001,
+                "oi_change_4h": 0.02,
+            },
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=anomaly_snapshot,
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        mock_perplexity_client.research.assert_awaited_once()
+        mock_prompt_builder.build_research_query.assert_called_once()
+
+    async def test_research_not_called_normal(self, orchestrator, mock_redis, mock_perplexity_client):
+        """Perplexity should NOT be called under normal conditions."""
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        mock_perplexity_client.research.assert_not_awaited()
+
+    async def test_risk_gate_rejection(self, orchestrator, mock_redis, mock_opus_client, mock_risk_gate, mock_risk_rejection_repo):
+        """Risk gate rejection should prevent execution."""
+        from orchestrator.risk_gate import RiskCheck, RiskResult
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+        )
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(action="OPEN_LONG", symbol="BTC-USDT-SWAP", size_pct=0.03, entry_price=60000.0, stop_loss=58500.0, take_profit=63000.0),
+            confidence=0.75,
+        )
+        mock_risk_gate.validate.return_value = RiskResult(
+            approved=False,
+            failures=[RiskCheck(passed=False, rule="trade_size", reason="Too large")],
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        mock_risk_rejection_repo.log.assert_awaited_once()
+        assert orchestrator.state == OrchestratorState.IDLE
+
+    async def test_executing_publishes_trade_order(self, orchestrator, mock_redis, mock_opus_client):
+        """EXECUTING state should publish TradeOrderMessage to trade:orders."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(action="OPEN_LONG", symbol="BTC-USDT-SWAP", size_pct=0.03, entry_price=60000.0, stop_loss=58500.0, take_profit=63000.0),
+            confidence=0.75,
+            strategy_used="momentum",
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        publish_calls = mock_redis.publish.call_args_list
+        trade_order_calls = [c for c in publish_calls if c[0][0] == "trade:orders"]
+        assert len(trade_order_calls) >= 1
+
+    async def test_executing_publishes_opus_decision(self, orchestrator, mock_redis, mock_opus_client):
+        """EXECUTING state should publish OpusDecisionMessage to opus:decisions."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(action="OPEN_LONG", symbol="BTC-USDT-SWAP", size_pct=0.03, entry_price=60000.0, stop_loss=58500.0, take_profit=63000.0),
+            confidence=0.75,
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        publish_calls = mock_redis.publish.call_args_list
+        opus_calls = [c for c in publish_calls if c[0][0] == "opus:decisions"]
+        assert len(opus_calls) >= 1
+
+    async def test_confirming_waits_for_fill(self, orchestrator, mock_redis, mock_opus_client):
+        """CONFIRMING state should wait for fill from trade:fills."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(action="OPEN_LONG", symbol="BTC-USDT-SWAP", size_pct=0.03, entry_price=60000.0, stop_loss=58500.0, take_profit=63000.0),
+            confidence=0.75,
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0, "status": "filled"},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        # read_latest should have been called for trade:fills
+        fill_calls = [c for c in mock_redis.read_latest.call_args_list if c[0][0] == "trade:fills"]
+        assert len(fill_calls) >= 1
+
+    async def test_confirming_timeout_no_fill(self, orchestrator, mock_redis, mock_opus_client, mock_trade_repo):
+        """CONFIRMING should handle timeout when no fill arrives."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(action="OPEN_LONG", symbol="BTC-USDT-SWAP", size_pct=0.03, entry_price=60000.0, stop_loss=58500.0, take_profit=63000.0),
+            confidence=0.75,
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload=None,  # No fill
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        # Should still complete cycle (timeout handled gracefully)
+        assert orchestrator.state == OrchestratorState.IDLE
+
+    async def test_journaling_creates_trade_record(self, orchestrator, mock_redis, mock_opus_client, mock_trade_repo):
+        """JOURNALING should create trade record in DB."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(action="OPEN_LONG", symbol="BTC-USDT-SWAP", size_pct=0.03, entry_price=60000.0, stop_loss=58500.0, take_profit=63000.0),
+            confidence=0.75,
+            strategy_used="momentum",
+            reasoning="Strong trend",
+            analysis=AnalysisResult(market_regime="trending_up"),
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        mock_trade_repo.create.assert_awaited_once()
+        create_args = mock_trade_repo.create.call_args[0][0]
+        assert create_args["symbol"] == "BTC-USDT-SWAP"
+        assert create_args["strategy_used"] == "momentum"
+
+    async def test_reflecting_calls_engine(self, orchestrator, mock_redis, mock_reflection_repo, mock_reflection_engine):
+        """REFLECTING should call reflection_engine when conditions met."""
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+        )
+        # Trigger reflection: 20+ trades since last
+        mock_reflection_repo.get_trades_since_last.return_value = [MagicMock() for _ in range(20)]
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        mock_reflection_engine.periodic_deep_reflection.assert_awaited_once()
+
+    async def test_on_trade_closed_triggers_post_trade_reflection(self, orchestrator, mock_reflection_engine):
+        """_on_trade_closed() should trigger post-trade reflection."""
+        trade = {"trade_id": "t-1", "pnl_usd": 100.0}
+        await orchestrator._on_trade_closed(trade)
+        mock_reflection_engine.post_trade_reflection.assert_awaited_once_with(trade)
+
+    async def test_positions_read_from_redis(self, orchestrator, mock_redis):
+        """Positions should be read from Redis, not hardcoded."""
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        # read_latest should have been called for trade:positions
+        pos_calls = [c for c in mock_redis.read_latest.call_args_list if len(c[0]) > 0 and c[0][0] == "trade:positions"]
+        assert len(pos_calls) >= 1
+
+    async def test_account_read_from_redis(self, orchestrator, mock_redis):
+        """Account state should be read from Redis, not hardcoded."""
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        # read_latest should have been called for account data
+        account_calls = [c for c in mock_redis.read_latest.call_args_list if len(c[0]) > 0 and c[0][0] == "trade:account"]
+        assert len(account_calls) >= 1
