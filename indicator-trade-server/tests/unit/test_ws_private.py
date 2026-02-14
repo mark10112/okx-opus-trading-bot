@@ -42,27 +42,42 @@ class TestInit:
 # --- Connect / Disconnect ---
 
 
+def _make_mock_ws_client():
+    """Create a mock WS client matching the new connect flow."""
+    mock = MagicMock()
+    mock.connect = AsyncMock()
+    mock.login = AsyncMock(return_value=True)
+    mock.consume = AsyncMock()
+    mock.stop = AsyncMock()
+    mock.websocket = MagicMock()
+    mock.websocket.send = AsyncMock()
+    mock.loop = MagicMock()
+    mock.loop.create_task = MagicMock()
+    return mock
+
+
 class TestConnect:
     @pytest.mark.asyncio
-    async def test_connect_creates_ws_and_starts(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
+    async def test_connect_creates_ws_and_authenticates(self, ws: OKXPrivateWS) -> None:
+        mock_ws_client = _make_mock_ws_client()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
 
-        await ws.connect()
+        with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
+            await ws.connect()
 
         ws._create_ws_client.assert_called_once()
-        mock_ws_client.start.assert_called_once()
+        mock_ws_client.connect.assert_called_once()
+        mock_ws_client.login.assert_called_once()
+        mock_ws_client.loop.create_task.assert_called_once()
         assert ws.connected is True
 
     @pytest.mark.asyncio
     async def test_disconnect_stops_ws(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
-        mock_ws_client.stop = AsyncMock()
+        mock_ws_client = _make_mock_ws_client()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
 
-        await ws.connect()
+        with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
+            await ws.connect()
         await ws.disconnect()
 
         mock_ws_client.stop.assert_called_once()
@@ -71,12 +86,12 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_disconnect_handles_stop_error(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
+        mock_ws_client = _make_mock_ws_client()
         mock_ws_client.stop = AsyncMock(side_effect=Exception("stop error"))
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
 
-        await ws.connect()
+        with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
+            await ws.connect()
         await ws.disconnect()  # Should not raise
 
         assert ws.connected is False
@@ -88,11 +103,10 @@ class TestConnect:
 class TestSubscribeOrders:
     @pytest.mark.asyncio
     async def test_subscribe_orders_registers_callback(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
-        mock_ws_client.subscribe = AsyncMock()
+        mock_ws_client = _make_mock_ws_client()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
-        await ws.connect()
+        with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
+            await ws.connect()
 
         callback = AsyncMock()
         await ws.subscribe_orders("SWAP", callback)
@@ -103,27 +117,25 @@ class TestSubscribeOrders:
         assert ws._subscriptions[0] == {"channel": "orders", "instType": "SWAP"}
 
     @pytest.mark.asyncio
-    async def test_subscribe_orders_calls_ws_subscribe(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
-        mock_ws_client.subscribe = AsyncMock()
+    async def test_subscribe_orders_sends_payload(self, ws: OKXPrivateWS) -> None:
+        mock_ws_client = _make_mock_ws_client()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
-        await ws.connect()
+        with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
+            await ws.connect()
 
         callback = AsyncMock()
         await ws.subscribe_orders("SWAP", callback)
 
-        mock_ws_client.subscribe.assert_called_once()
+        mock_ws_client.websocket.send.assert_called_once()
 
 
 class TestSubscribePositions:
     @pytest.mark.asyncio
     async def test_subscribe_positions_registers_callback(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
-        mock_ws_client.subscribe = AsyncMock()
+        mock_ws_client = _make_mock_ws_client()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
-        await ws.connect()
+        with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
+            await ws.connect()
 
         callback = AsyncMock()
         await ws.subscribe_positions("SWAP", callback)
@@ -135,11 +147,10 @@ class TestSubscribePositions:
 class TestSubscribeAccount:
     @pytest.mark.asyncio
     async def test_subscribe_account_registers_callback(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
-        mock_ws_client.subscribe = AsyncMock()
+        mock_ws_client = _make_mock_ws_client()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
-        await ws.connect()
+        with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
+            await ws.connect()
 
         callback = AsyncMock()
         await ws.subscribe_account(callback)
@@ -259,9 +270,7 @@ class TestReconnect:
 
     @pytest.mark.asyncio
     async def test_reconnect_resubscribes(self, ws: OKXPrivateWS) -> None:
-        mock_ws_client = MagicMock()
-        mock_ws_client.start = AsyncMock()
-        mock_ws_client.subscribe = AsyncMock()
+        mock_ws_client = _make_mock_ws_client()
         ws._create_ws_client = MagicMock(return_value=mock_ws_client)
 
         ws._subscriptions = [
@@ -273,6 +282,6 @@ class TestReconnect:
         with patch("indicator_trade.trade.ws_private.asyncio.sleep", new_callable=AsyncMock):
             await ws._reconnect()
 
-        # Should have re-subscribed both channels
-        assert mock_ws_client.subscribe.call_count == 2
+        # Should have re-subscribed both channels via websocket.send
+        assert mock_ws_client.websocket.send.call_count == 2
         assert ws._reconnect_attempts == 0
