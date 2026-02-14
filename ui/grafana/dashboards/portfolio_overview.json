@@ -1,0 +1,12 @@
+{
+  "dashboard": {
+    "title": "Portfolio Overview",
+    "uid": "portfolio-overview",
+    "tags": ["trading-bot"],
+    "timezone": "utc",
+    "panels": [],
+    "templating": { "list": [] },
+    "time": { "from": "now-7d", "to": "now" },
+    "refresh": "1m"
+  }
+}

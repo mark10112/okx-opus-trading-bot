@@ -1,0 +1,4 @@
+creation_rules:
+  - path_regex: \.enc\.env$
+    age: >-
+      age1_REPLACE_WITH_YOUR_PUBLIC_KEY

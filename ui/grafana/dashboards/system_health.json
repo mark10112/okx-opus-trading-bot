@@ -1,0 +1,12 @@
+{
+  "dashboard": {
+    "title": "System Health",
+    "uid": "system-health",
+    "tags": ["trading-bot"],
+    "timezone": "utc",
+    "panels": [],
+    "templating": { "list": [] },
+    "time": { "from": "now-1d", "to": "now" },
+    "refresh": "30s"
+  }
+}
