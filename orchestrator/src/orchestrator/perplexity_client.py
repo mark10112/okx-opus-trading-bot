@@ -6,6 +6,7 @@ import json
 
 import httpx
 import structlog
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from orchestrator.config import Settings
 from orchestrator.db.repository import ResearchCacheRepository
@@ -63,41 +64,46 @@ class PerplexityClient:
     async def _call_api(self, query: str) -> dict:
         """Send POST to Perplexity API, parse response content as JSON."""
         try:
-            async with httpx.AsyncClient() as http:
-                response = await http.post(
-                    PERPLEXITY_API_URL,
-                    headers={
-                        "Authorization": f"Bearer {self.settings.PERPLEXITY_API_KEY}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": self.settings.PERPLEXITY_MODEL,
-                        "messages": [
-                            {"role": "system", "content": RESEARCH_SYSTEM_PROMPT},
-                            {"role": "user", "content": query},
-                        ],
-                    },
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                data = response.json()
-                content = data["choices"][0]["message"]["content"]
+            raw = await self._call_api_with_retry(query)
+            content = raw["choices"][0]["message"]["content"]
 
-                # Try to parse content as JSON
+            # Try to parse content as JSON
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                # Try extracting JSON from text
                 try:
-                    return json.loads(content)
-                except json.JSONDecodeError:
-                    # Try extracting JSON from text
-                    try:
-                        start = content.index("{")
-                        end = content.rindex("}") + 1
-                        return json.loads(content[start:end])
-                    except (ValueError, json.JSONDecodeError):
-                        logger.warning("perplexity_parse_error", content=content[:200])
-                        return {}
+                    start = content.index("{")
+                    end = content.rindex("}") + 1
+                    return json.loads(content[start:end])
+                except (ValueError, json.JSONDecodeError):
+                    logger.warning("perplexity_parse_error", content=content[:200])
+                    return {}
         except Exception as e:
             logger.warning("perplexity_api_error", error=str(e))
             return {}
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
+    async def _call_api_with_retry(self, query: str) -> dict:
+        """Low-level HTTP POST with retry on transient errors."""
+        async with httpx.AsyncClient() as http:
+            response = await http.post(
+                PERPLEXITY_API_URL,
+                headers={
+                    "Authorization": f"Bearer {self.settings.PERPLEXITY_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.settings.PERPLEXITY_MODEL,
+                    "messages": [
+                        {"role": "system", "content": RESEARCH_SYSTEM_PROMPT},
+                        {"role": "user", "content": query},
+                    ],
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.json()
 
     async def _check_cache(self, query: str) -> ResearchResult | None:
         """Check cache for recent result within TTL."""
