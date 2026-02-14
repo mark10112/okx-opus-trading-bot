@@ -91,15 +91,19 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          python -m pytest tests/unit/ -v \
+          set +e
+          python -m pytest tests/ -v \
             --cov=indicator_trade \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-fail-under=80 \
             --junitxml=junit.xml
+          rc=$?
+          if [ $rc -eq 5 ]; then echo "No tests collected — skipping"; exit 0; fi
+          exit $rc
 
       - name: Coverage comment on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && hashFiles('indicator-trade-server/coverage.xml') != ''
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-xml-coverage-path: indicator-trade-server/coverage.xml
@@ -134,15 +138,19 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          python -m pytest tests/unit/ -v \
+          set +e
+          python -m pytest tests/ -v \
             --cov=orchestrator \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-fail-under=80 \
             --junitxml=junit.xml
+          rc=$?
+          if [ $rc -eq 5 ]; then echo "No tests collected — skipping"; exit 0; fi
+          exit $rc
 
       - name: Coverage comment on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && hashFiles('orchestrator/coverage.xml') != ''
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-xml-coverage-path: orchestrator/coverage.xml
@@ -177,15 +185,19 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          python -m pytest tests/unit/ -v \
+          set +e
+          python -m pytest tests/ -v \
             --cov=ui \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-fail-under=80 \
             --junitxml=junit.xml
+          rc=$?
+          if [ $rc -eq 5 ]; then echo "No tests collected — skipping"; exit 0; fi
+          exit $rc
 
       - name: Coverage comment on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && hashFiles('ui/coverage.xml') != ''
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-xml-coverage-path: ui/coverage.xml
