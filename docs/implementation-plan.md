@@ -18,11 +18,11 @@ Build a self-learning AI crypto trading bot using Claude Opus 4.6 as the brain, 
 | 3 | Orchestrator Core — State Machine, Risk Gate, DB | ✅ Done | 157 unit tests, all 5 components implemented |
 | 4 | Orchestrator AI Integration | ✅ Done | AI components integrated, stubs replaced, orchestrator test suite at 274 passing tests |
 | 5 | Telegram Bot | ✅ Done | 106 unit tests, all 5 components implemented |
-| 6 | Grafana Dashboards | 🔲 Not started | 7 JSON files exist but need real panel queries |
+| 6 | Grafana Dashboards | ✅ Done | 99 unit tests, 7 dashboards with real panels, migration 003 |
 | 7 | Integration Testing & End-to-End | 🔲 Not started | — |
 | 8 | Polish & Production Readiness | 🔲 Not started | — |
 
-**Last updated**: 2026-02-15
+**Last updated**: 2026-02-14
 
 ---
 
@@ -101,6 +101,7 @@ Uses `redis.asyncio` with `xreadgroup`, `xadd`, `xack`, connection pooling.
 ### 0.5 Database Schema (Alembic in orchestrator) ✅
 - ✅ **Migration 001**: trades, playbook_versions, reflection_logs, research_cache, performance_snapshots, risk_rejections, candles (TimescaleDB hypertable)
 - ✅ **Migration 002**: screener_logs
+- ✅ **Migration 003**: grafana_reader read-only DB user
 
 ### 0.6 Shared Config Pattern ✅
 ✅ All repos use `pydantic_settings.BaseSettings` loading from env vars.
@@ -374,24 +375,27 @@ Plain text formatting for: status, positions, trades list, performance, playbook
 
 ---
 
-## Phase 6: Grafana Dashboards (can parallel with Phase 3-4) 🔲
+## Phase 6: Grafana Dashboards (can parallel with Phase 3-4) ✅
 
-### 6.1 PostgreSQL Datasource 🔲
-- 🔲 Read-only `grafana_reader` user
+### 6.1 PostgreSQL Datasource ✅
+- ✅ Read-only `grafana_reader` user (Alembic migration 003)
 - ✅ Provisioned via `datasource.yml`
+- ✅ `GRAFANA_DB_PASSWORD` env var added to docker-compose
 
-### 6.2 Seven Dashboard JSON Files 🔲
-1. **Portfolio Overview**: equity curve, daily PnL, drawdown, Sharpe, win rate
-2. **Active Positions**: open trades table, unrealized PnL, SL/TP distances
-3. **Strategy Performance**: win rate/PnL/R:R by strategy, trade distribution
-4. **Opus Activity**: decisions/hour, confidence, screener pass rate, API latency, cost
-5. **Risk Monitor**: daily loss gauge, drawdown gauge, exposure, consecutive losses, rejections
-6. **System Health**: bot state, heartbeat, screener throughput, DB size, candle count
-7. **Playbook Evolution**: version timeline, lessons, change log, confidence calibration
+### 6.2 Seven Dashboard JSON Files ✅
+All flat format (no `"dashboard"` wrapper), schemaVersion 39, datasource `TradingBot-PostgreSQL`:
+1. **Portfolio Overview** (6 panels): Equity Curve (timeseries), Total PnL (stat), Win Rate (gauge), Daily PnL (barchart), Drawdown (timeseries), Sharpe Ratio (stat)
+2. **Active Positions** (3 panels): Open Trades (table), Unrealized PnL (stat), SL/TP Distances (table)
+3. **Strategy Performance** (5 panels): Win Rate by Strategy (barchart), PnL by Strategy (barchart), R:R by Strategy (barchart), Trade Distribution by Regime (piechart), Trade Count by Strategy (stat)
+4. **Opus Activity** (5 panels): Decisions/Hour (timeseries), Avg Confidence (gauge), Screener Pass Rate (gauge), API Latency (timeseries), Screener Logs (table)
+5. **Risk Monitor** (6 panels): Daily Loss (gauge), Max Drawdown (gauge), Open Positions Count (stat), Total Exposure (stat), Consecutive Losses (stat), Recent Rejections (table)
+6. **System Health** (6 panels): Bot State (stat), Candle Count (stat), DB Size (stat), Recent Trades Count (stat), Last Trade Time (stat), Screener Throughput (timeseries)
+7. **Playbook Evolution** (4 panels): Version Timeline (table), Change Log (table), Confidence Calibration (timeseries), Lessons (table)
 
 ### 6.3 Auto-provisioning via Docker volume mounts ✅
 
 ### Verify
+- ✅ Unit: dashboard JSON validation — flat format, required keys, panel structure, datasource refs, unique UIDs/IDs (99 tests)
 - 🔲 All 7 dashboards appear in Grafana "Trading Bot" folder
 - 🔲 Datasource connects to PostgreSQL
 - 🔲 Panels render with seeded test data
