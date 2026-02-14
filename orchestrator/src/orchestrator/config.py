@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # --- Anthropic ---
     ANTHROPIC_API_KEY: str = ""
-    OPUS_MODEL: str = "claude-opus-4-6"
+    OPUS_MODEL: str = "claude-haiku-4-5-20251001"
     HAIKU_MODEL: str = "claude-haiku-4-5-20251001"
     OPUS_MAX_TOKENS: int = 4096
     HAIKU_MAX_TOKENS: int = 100

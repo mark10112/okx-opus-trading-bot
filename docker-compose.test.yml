@@ -1,0 +1,35 @@
+# Integration test infrastructure — lightweight, isolated ports.
+# Usage: docker compose -f docker-compose.test.yml up -d
+#
+# Ports are offset from dev to avoid conflicts:
+#   Postgres: 5433 (dev: 5432)
+#   Redis:    6380 (dev: 6379)
+
+services:
+  postgres-test:
+    image: timescale/timescaledb:latest-pg16
+    container_name: trading-bot-postgres-test
+    environment:
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: trading_bot_test
+      POSTGRES_USER: postgres
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trading_bot_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: trading-bot-redis-test
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
