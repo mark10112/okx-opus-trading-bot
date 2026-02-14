@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
@@ -276,12 +277,17 @@ class Orchestrator:
             # --- 8. JOURNALING ---
             self._set_state(OrchestratorState.JOURNALING)
             if self.trade_repo:
+                # Map action to direction (varchar(5) CHECK: LONG/SHORT)
+                direction = "LONG" if "LONG" in action else "SHORT"
                 trade_record = {
+                    "trade_id": str(uuid.uuid4()),
+                    "opened_at": datetime.now(timezone.utc),
                     "symbol": opus_result.decision.symbol or instrument,
-                    "direction": action,
+                    "direction": direction,
                     "entry_price": opus_result.decision.entry_price,
                     "stop_loss": opus_result.decision.stop_loss,
                     "take_profit": opus_result.decision.take_profit,
+                    "size": opus_result.decision.size_pct,
                     "size_pct": opus_result.decision.size_pct,
                     "leverage": 1.0,
                     "confidence_at_entry": opus_result.confidence,
@@ -289,9 +295,11 @@ class Orchestrator:
                     "market_regime": opus_result.analysis.market_regime
                     if opus_result.analysis
                     else "unknown",
-                    "reasoning": opus_result.reasoning,
-                    "fill_data": fill_data,
+                    "opus_reasoning": opus_result.reasoning,
+                    "status": "open",
                 }
+                if fill_data:
+                    trade_record["okx_order_id"] = fill_data.get("ord_id")
                 await self.trade_repo.create(trade_record)
 
         # --- 9. REFLECTING ---
