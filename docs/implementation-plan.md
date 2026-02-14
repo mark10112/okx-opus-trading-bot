@@ -15,14 +15,14 @@ Build a self-learning AI crypto trading bot using Claude Opus 4.6 as the brain, 
 | 0 | Infrastructure & Repo Scaffolding | ✅ Done | All scaffolding, Docker, DB migrations, shared protocol complete |
 | 1 | Indicator Server — Market Data Pipeline | ✅ Done | 98 unit tests, all 6 components implemented |
 | 2 | Trade Server — Order Execution | ✅ Done | 127 unit tests, all 6 components implemented |
-| 3 | Orchestrator Core — State Machine, Risk Gate, DB | 🔲 Not started | Files exist as stubs (`...` bodies) |
+| 3 | Orchestrator Core — State Machine, Risk Gate, DB | ✅ Done | 157 unit tests, all 5 components implemented |
 | 4 | Orchestrator AI Integration | 🔲 Not started | Files exist as stubs (`...` bodies) |
 | 5 | Telegram Bot | 🔲 Not started | Files exist as stubs (`...` bodies) |
 | 6 | Grafana Dashboards | 🔲 Not started | 7 JSON files exist but need real panel queries |
 | 7 | Integration Testing & End-to-End | 🔲 Not started | — |
 | 8 | Polish & Production Readiness | 🔲 Not started | — |
 
-**Last updated**: 2025-07-16
+**Last updated**: 2026-02-14
 
 ---
 
@@ -225,12 +225,12 @@ asyncio.gather(indicator_server.start(), trade_server.start())
 
 ---
 
-## Phase 3: Orchestrator Core -- State Machine, Risk Gate, DB 🔲
+## Phase 3: Orchestrator Core -- State Machine, Risk Gate, DB ✅
 
 ### 3.1 SQLAlchemy ORM Models (`db/models.py`) ✅
 TradeORM, PlaybookVersionORM, ReflectionLogORM, ResearchCacheORM, PerformanceSnapshotORM, ScreenerLogORM, RiskRejectionORM
 
-### 3.2 DB Repositories (`db/repository.py`) 🔲
+### 3.2 DB Repositories (`db/repository.py`) ✅
 - `TradeRepository`: create, update, get_open, get_recent_closed, get_trades_since
 - `PlaybookRepository`: get_latest, save_version, get_history
 - `ReflectionRepository`: save, get_last_time, get_trades_since_last
@@ -239,7 +239,7 @@ TradeORM, PlaybookVersionORM, ReflectionLogORM, ResearchCacheORM, PerformanceSna
 - `RiskRejectionRepository`: log
 - `PerformanceSnapshotRepository`: save (hourly/daily/weekly)
 
-### 3.3 Risk Gate (`risk_gate.py`) -- CRITICAL SAFETY 🔲
+### 3.3 Risk Gate (`risk_gate.py`) -- CRITICAL SAFETY ✅
 Hardcoded, non-overridable circuit breakers:
 | Rule | Threshold | Action |
 |------|-----------|--------|
@@ -255,11 +255,11 @@ Hardcoded, non-overridable circuit breakers:
 | Consecutive Loss Cooldown | 3 losses -> 30 min | COOLDOWN |
 | Correlated Position Check | r > 0.8 | Reject |
 
-### 3.4 Playbook Manager 🔲
+### 3.4 Playbook Manager ✅
 - Load/create default playbook v1 (regime rules, strategies, empty lessons)
 - Version management with change tracking
 
-### 3.5 News Scheduler 🔲
+### 3.5 News Scheduler ✅
 - FOMC/CPI/NFP dates for 2026
 - `is_news_window(minutes_before=30)` for screener bypass
 
@@ -269,10 +269,10 @@ States: IDLE -> COLLECTING -> SCREENING -> RESEARCHING -> ANALYZING -> RISK_CHEC
 - Full state transition logic
 
 ### Verify
-- 🔲 Unit: every risk gate rule with boundary values (-3.0% vs -2.9% vs -3.1%)
-- 🔲 Unit: state transitions in correct order
-- 🔲 Unit: playbook CRUD operations
-- 🔲 DB: repositories create/read correctly
+- ✅ Unit: every risk gate rule with boundary values (64 tests)
+- ✅ Unit: state transitions in correct order (35 tests)
+- ✅ Unit: playbook CRUD operations (10 tests)
+- ✅ DB: repositories create/read correctly (29 tests)
 - 🔲 Alembic: upgrade + downgrade works cleanly
 
 ---
