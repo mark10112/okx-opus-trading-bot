@@ -17,12 +17,12 @@ Build a self-learning AI crypto trading bot using Claude Opus 4.6 as the brain, 
 | 2 | Trade Server — Order Execution | ✅ Done | 127 unit tests, all 6 components implemented |
 | 3 | Orchestrator Core — State Machine, Risk Gate, DB | ✅ Done | 157 unit tests, all 5 components implemented |
 | 4 | Orchestrator AI Integration | ✅ Done | AI components integrated, stubs replaced, orchestrator test suite at 274 passing tests |
-| 5 | Telegram Bot | 🔲 Not started | Files exist as stubs (`...` bodies) |
+| 5 | Telegram Bot | ✅ Done | 106 unit tests, all 5 components implemented |
 | 6 | Grafana Dashboards | 🔲 Not started | 7 JSON files exist but need real panel queries |
 | 7 | Integration Testing & End-to-End | 🔲 Not started | — |
 | 8 | Polish & Production Readiness | 🔲 Not started | — |
 
-**Last updated**: 2026-02-14
+**Last updated**: 2026-02-15
 
 ---
 
@@ -339,32 +339,35 @@ After each Opus call triggered by Haiku pass, update screener_log with Opus agre
 
 ---
 
-## Phase 5: Telegram Bot (can parallel with Phase 3-4) 🔲
+## Phase 5: Telegram Bot (can parallel with Phase 3-4) ✅
 
-### 5.1 DB Queries (read-only, `db/queries.py`) 🔲
+### 5.1 DB Queries (read-only, `db/queries.py`) ✅
 `get_equity_and_pnl()`, `get_open_positions()`, `get_recent_trades()`, `get_latest_playbook()`, `get_performance_metrics()`, `get_screener_pass_rate()`, `get_latest_decision()`, `get_daily_trade_summary()`
 
-### 5.2 Message Formatters (`formatters.py`) 🔲
-MarkdownV2 formatting for: status, positions, trades list, performance, playbook, alerts, fills
+### 5.2 Message Formatters (`formatters.py`) ✅
+Plain text formatting for: status, positions, trades list, performance, playbook, alerts, fills
 
-### 5.3 Command Handlers (`commands.py`) 🔲
+### 5.3 Command Handlers (`commands.py`) ✅
 10 commands: `/status`, `/positions`, `/trades [n]`, `/performance`, `/playbook`, `/halt [reason]` (admin), `/resume` (admin), `/research [query]`, `/reflect`, `/config [key] [value]` (admin)
 
-### 5.4 Alert Sender (`alerts.py`) 🔲
+### 5.4 Alert Sender (`alerts.py`) ✅
 - Subscribe: trade:fills, trade:positions, opus:decisions, system:alerts, market:alerts
 - Severity routing: INFO, WARN, CRITICAL
 - Cooldown: 60s between same-type alerts
 - Silent hours (configurable UTC)
 - CRITICAL always sends immediately
 
-### 5.5 Bot Application (`bot.py`) 🔲
+### 5.5 Bot Application (`bot.py`) ✅
 - `python-telegram-bot` Application with CommandHandlers
 - Authorization check: chat_id matches config
 - Alert listener as background asyncio task
 
 ### Verify
-- 🔲 Unit: formatters produce valid Markdown
-- 🔲 Unit: alert cooldown logic
+- ✅ Unit: formatters produce valid output (37 tests)
+- ✅ Unit: alert cooldown logic (19 tests)
+- ✅ Unit: command handlers with auth/admin (22 tests)
+- ✅ Unit: DB queries (20 tests)
+- ✅ Unit: bot lifecycle (8 tests)
 - 🔲 Integration: `/status` returns data from DB
 - 🔲 Integration: publish `trade:fills` to Redis -> Telegram alert received
 - 🔲 Admin: `/halt` publishes system:alerts
