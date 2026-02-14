@@ -9,7 +9,12 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from orchestrator.models.messages import StreamMessage, SystemAlertMessage
+from orchestrator.models.messages import (
+    OpusDecisionMessage,
+    StreamMessage,
+    SystemAlertMessage,
+    TradeOrderMessage,
+)
 
 if TYPE_CHECKING:
     from orchestrator.config import Settings
@@ -19,9 +24,14 @@ if TYPE_CHECKING:
         ScreenerLogRepository,
         TradeRepository,
     )
+    from orchestrator.haiku_screener import HaikuScreener
     from orchestrator.news_scheduler import NewsScheduler
+    from orchestrator.opus_client import OpusClient
+    from orchestrator.perplexity_client import PerplexityClient
     from orchestrator.playbook_manager import PlaybookManager
+    from orchestrator.prompt_builder import PromptBuilder
     from orchestrator.redis_client import RedisClient
+    from orchestrator.reflection_engine import ReflectionEngine
     from orchestrator.risk_gate import RiskGate
 
 logger = structlog.get_logger()
@@ -58,6 +68,13 @@ class Orchestrator:
         self.screener_repo: ScreenerLogRepository | None = None
         self.risk_rejection_repo: RiskRejectionRepository | None = None
         self.news_scheduler: NewsScheduler | None = None
+
+        # AI components (Phase 4)
+        self.haiku_screener: HaikuScreener | None = None
+        self.opus_client: OpusClient | None = None
+        self.perplexity_client: PerplexityClient | None = None
+        self.prompt_builder: PromptBuilder | None = None
+        self.reflection_engine: ReflectionEngine | None = None
 
     def _set_state(self, new_state: OrchestratorState) -> None:
         """Update state with logging."""
@@ -122,62 +139,83 @@ class Orchestrator:
             return
 
         snapshot = snapshot_msg.payload
-        positions: list = []  # Would come from trade:positions in Phase 4
-        account: dict = {"equity": 10000.0}  # Stub — replaced in Phase 4
+        positions = await self._collect_positions()
+        account = await self._collect_account()
 
-        # --- 2. SCREENING (stub: always pass) ---
+        # --- 2. SCREENING ---
         self._set_state(OrchestratorState.SCREENING)
         bypass = self._should_bypass_screener(snapshot, positions)
-        if not bypass and self.settings.SCREENER_ENABLED:
-            # Stub: Haiku screener returns signal=True (replaced in Phase 4)
-            screen_signal = True
+        screener_log_id = None
+        if not bypass and self.settings.SCREENER_ENABLED and self.haiku_screener:
+            screen_result = await self.haiku_screener.screen(snapshot)
             if self.screener_repo:
-                await self.screener_repo.log({
+                screener_log_id = await self.screener_repo.log({
                     "symbol": instrument,
-                    "signal": screen_signal,
-                    "reason": "stub_screener",
+                    "signal": screen_result.signal,
+                    "reason": screen_result.reason,
                     "snapshot_json": snapshot,
-                    "tokens_used": 0,
-                    "latency_ms": 0,
+                    "tokens_used": screen_result.tokens_used,
+                    "latency_ms": screen_result.latency_ms,
                 })
-            if not screen_signal:
+            if not screen_result.signal:
                 self._set_state(OrchestratorState.IDLE)
                 return
 
-        # --- 3. RESEARCHING (stub: skip) ---
+        # --- 3. RESEARCHING ---
         self._set_state(OrchestratorState.RESEARCHING)
         research_context = None
-        if self._should_research(snapshot):
-            # Stub: Perplexity call (replaced in Phase 4)
-            research_context = {"summary": "stub_research"}
+        if self._should_research(snapshot) and self.perplexity_client and self.prompt_builder:
+            query = self.prompt_builder.build_research_query(snapshot)
+            research_result = await self.perplexity_client.research(query)
+            if research_result.summary:
+                research_context = research_result.model_dump(mode="json")
 
-        # --- 4. ANALYZING (stub: HOLD) ---
+        # --- 4. ANALYZING ---
         self._set_state(OrchestratorState.ANALYZING)
-        # Stub: Opus returns HOLD (replaced in Phase 4)
-        opus_decision = {
-            "action": "HOLD",
-            "symbol": instrument,
-            "size_pct": 0.0,
-            "entry_price": 0.0,
-            "stop_loss": 0.0,
-            "take_profit": 0.0,
-            "leverage": 1.0,
-            "confidence": 0.0,
-            "strategy_used": "",
-            "reasoning": "Stub: default HOLD",
-        }
+        if self.prompt_builder and self.opus_client and self.playbook_manager:
+            playbook = await self.playbook_manager.get_latest()
+            recent_trades = []
+            if self.trade_repo:
+                recent_trades = await self.trade_repo.get_recent_closed(limit=10)
+                recent_trades = [
+                    t.model_dump(mode="json") if hasattr(t, "model_dump") else dict(t)
+                    for t in recent_trades
+                ]
 
-        action = opus_decision.get("action", "HOLD")
+            prompt = self.prompt_builder.build_analysis_prompt(
+                snapshot=snapshot,
+                positions=positions,
+                account=account,
+                research=research_context,
+                playbook=playbook.model_dump(mode="json"),
+                recent_trades=recent_trades,
+            )
+            opus_result = await self.opus_client.analyze(prompt)
+        else:
+            from orchestrator.models.decision import OpusDecision
+            opus_result = OpusDecision()
+
+        action = opus_result.decision.action
+
+        # Track screener accuracy: did Opus agree with Haiku?
+        if screener_log_id and self.screener_repo:
+            opus_agreed = action != "HOLD"
+            await self.screener_repo.update_opus_agreement(screener_log_id, opus_agreed)
 
         # --- 5. RISK_CHECK ---
         if action != "HOLD":
             self._set_state(OrchestratorState.RISK_CHECK)
+            decision_dict = opus_result.decision.model_dump(mode="json")
+            decision_dict["confidence"] = opus_result.confidence
+            decision_dict["strategy_used"] = opus_result.strategy_used
+            decision_dict["reasoning"] = opus_result.reasoning
+
             if self.risk_gate:
-                risk_result = self.risk_gate.validate(opus_decision, account, positions)
+                risk_result = self.risk_gate.validate(decision_dict, account, positions)
                 if not risk_result.approved:
                     if self.risk_rejection_repo:
                         await self.risk_rejection_repo.log(
-                            decision=opus_decision,
+                            decision=decision_dict,
                             failed_rules=[f.rule for f in risk_result.failures],
                             account_state=account,
                         )
@@ -196,21 +234,69 @@ class Orchestrator:
                     self._set_state(OrchestratorState.IDLE)
                     return
 
-            # --- 6. EXECUTING (stub: skip actual order) ---
+            # --- 6. EXECUTING ---
             self._set_state(OrchestratorState.EXECUTING)
-            logger.info("stub_execute", action=action, instrument=instrument)
+            order_msg = TradeOrderMessage(
+                source="orchestrator",
+                payload={
+                    "action": action,
+                    "symbol": opus_result.decision.symbol or instrument,
+                    "size_pct": opus_result.decision.size_pct,
+                    "entry_price": opus_result.decision.entry_price,
+                    "stop_loss": opus_result.decision.stop_loss,
+                    "take_profit": opus_result.decision.take_profit,
+                    "order_type": opus_result.decision.order_type or "market",
+                    "limit_price": opus_result.decision.limit_price,
+                    "confidence": opus_result.confidence,
+                    "strategy_used": opus_result.strategy_used,
+                    "reasoning": opus_result.reasoning,
+                },
+            )
+            await self.redis.publish("trade:orders", order_msg)
 
-            # --- 7. CONFIRMING (stub: skip) ---
+            # Publish Opus decision for logging/UI
+            opus_msg = OpusDecisionMessage(
+                source="orchestrator",
+                payload=opus_result.model_dump(mode="json"),
+            )
+            await self.redis.publish("opus:decisions", opus_msg)
+
+            logger.info(
+                "order_sent",
+                action=action,
+                instrument=instrument,
+                confidence=opus_result.confidence,
+            )
+
+            # --- 7. CONFIRMING ---
             self._set_state(OrchestratorState.CONFIRMING)
+            fill_msg = await self.redis.read_latest("trade:fills")
+            fill_data = fill_msg.payload if fill_msg else None
 
-            # --- 8. JOURNALING (stub: skip) ---
+            # --- 8. JOURNALING ---
             self._set_state(OrchestratorState.JOURNALING)
+            if self.trade_repo:
+                trade_record = {
+                    "symbol": opus_result.decision.symbol or instrument,
+                    "direction": action,
+                    "entry_price": opus_result.decision.entry_price,
+                    "stop_loss": opus_result.decision.stop_loss,
+                    "take_profit": opus_result.decision.take_profit,
+                    "size_pct": opus_result.decision.size_pct,
+                    "leverage": 1.0,
+                    "confidence_at_entry": opus_result.confidence,
+                    "strategy_used": opus_result.strategy_used,
+                    "market_regime": opus_result.analysis.market_regime if opus_result.analysis else "unknown",
+                    "reasoning": opus_result.reasoning,
+                    "fill_data": fill_data,
+                }
+                await self.trade_repo.create(trade_record)
 
         # --- 9. REFLECTING ---
         if await self._should_reflect():
             self._set_state(OrchestratorState.REFLECTING)
-            # Stub: reflection (replaced in Phase 4)
-            logger.info("stub_reflect")
+            if self.reflection_engine:
+                await self.reflection_engine.periodic_deep_reflection()
 
         self._set_state(OrchestratorState.IDLE)
 
@@ -307,6 +393,23 @@ class Orchestrator:
             until=self.cooldown_until.isoformat(),
         )
 
+    async def _collect_positions(self) -> list:
+        """Read current positions from Redis trade:positions."""
+        pos_msg = await self.redis.read_latest("trade:positions")
+        if pos_msg and pos_msg.payload:
+            payload = pos_msg.payload
+            if isinstance(payload, dict):
+                return payload.get("positions", [])
+            return payload if isinstance(payload, list) else [payload]
+        return []
+
+    async def _collect_account(self) -> dict:
+        """Read current account state from Redis trade:account."""
+        acct_msg = await self.redis.read_latest("trade:account")
+        if acct_msg and acct_msg.payload:
+            return acct_msg.payload if isinstance(acct_msg.payload, dict) else {}
+        return {"equity": 10000.0, "available_balance": 10000.0}
+
     async def _on_trade_closed(self, trade: dict) -> None:
         """Called when position closed: update trade, reflect, check cooldown."""
         pnl = trade.get("pnl_usd", 0.0)
@@ -318,5 +421,9 @@ class Orchestrator:
             # Check if cooldown was triggered
             if self.risk_gate.cooldown_until is not None:
                 await self._handle_cooldown()
+
+        # Post-trade reflection
+        if self.reflection_engine:
+            await self.reflection_engine.post_trade_reflection(trade)
 
         logger.info("trade_closed_processed", trade_id=trade.get("trade_id"), pnl=pnl)
