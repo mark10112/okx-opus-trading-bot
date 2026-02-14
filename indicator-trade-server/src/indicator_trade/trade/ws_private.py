@@ -63,7 +63,7 @@ class OKXPrivateWS:
         sub = {"channel": "orders", "instType": instType}
         self._subscriptions.append(sub)
         if self._ws is not None:
-            self._ws.subscribe([sub], self._ws_callback)
+            await self._ws.subscribe([sub], self._ws_callback)
         logger.info("ws_subscribed_orders", instType=instType)
 
     async def subscribe_positions(
@@ -74,7 +74,7 @@ class OKXPrivateWS:
         sub = {"channel": "positions", "instType": instType}
         self._subscriptions.append(sub)
         if self._ws is not None:
-            self._ws.subscribe([sub], self._ws_callback)
+            await self._ws.subscribe([sub], self._ws_callback)
         logger.info("ws_subscribed_positions", instType=instType)
 
     async def subscribe_account(self, callback: Callable[[dict], Awaitable[None]]) -> None:
@@ -83,7 +83,7 @@ class OKXPrivateWS:
         sub = {"channel": "account"}
         self._subscriptions.append(sub)
         if self._ws is not None:
-            self._ws.subscribe([sub], self._ws_callback)
+            await self._ws.subscribe([sub], self._ws_callback)
         logger.info("ws_subscribed_account")
 
     def _ws_callback(self, message: str) -> None:
@@ -134,7 +134,7 @@ class OKXPrivateWS:
             # Re-subscribe all channels
             if self._ws is not None:
                 for sub in self._subscriptions:
-                    self._ws.subscribe([sub], self._ws_callback)
+                    await self._ws.subscribe([sub], self._ws_callback)
             self._reconnect_attempts = 0
             logger.info("ws_private_reconnected")
         except Exception:
