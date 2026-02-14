@@ -1,8 +1,8 @@
 """MarketSnapshot (full) Pydantic model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from indicator_trade.models.candle import Candle
 from indicator_trade.models.indicator_set import IndicatorSet
@@ -40,4 +40,4 @@ class MarketSnapshot(BaseModel):
     market_regime: str = "ranging"
     price_change_1h: float = 0.0
     oi_change_4h: float = 0.0
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

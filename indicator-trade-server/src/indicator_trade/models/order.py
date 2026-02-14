@@ -1,8 +1,8 @@
 """OrderRequest, OrderResult Pydantic models."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class OrderRequest(BaseModel):
@@ -31,4 +31,4 @@ class OrderResult(BaseModel):
     error_message: str | None = None
     fill_price: float | None = None
     fill_size: float | None = None
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

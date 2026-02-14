@@ -1,8 +1,8 @@
 """Position, AccountState Pydantic models."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Position(BaseModel):
@@ -25,4 +25,4 @@ class AccountState(BaseModel):
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
     max_drawdown_today: float = 0.0
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
