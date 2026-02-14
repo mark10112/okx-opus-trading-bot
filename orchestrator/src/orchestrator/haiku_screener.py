@@ -83,7 +83,9 @@ class HaikuScreener:
 
         indicators = snapshot.get("indicators", {})
         for tf, ind in indicators.items():
-            parts.append(f"[{tf}] RSI:{ind.get('rsi', 'N/A')} ADX:{ind.get('adx', 'N/A')} BB:{ind.get('bb_position', 'N/A')} EMA:{ind.get('ema_alignment', 'N/A')} MACD:{ind.get('macd_signal', 'N/A')}")
+            parts.append(
+                f"[{tf}] RSI:{ind.get('rsi', 'N/A')} ADX:{ind.get('adx', 'N/A')} BB:{ind.get('bb_position', 'N/A')} EMA:{ind.get('ema_alignment', 'N/A')} MACD:{ind.get('macd_signal', 'N/A')}"
+            )
 
         return "\n".join(parts)
 

@@ -187,7 +187,16 @@ def sample_performance():
 
 
 class TestBuildAnalysisPrompt:
-    def test_returns_string(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_returns_string(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -199,7 +208,16 @@ class TestBuildAnalysisPrompt:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_contains_market_snapshot_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_market_snapshot_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -211,7 +229,16 @@ class TestBuildAnalysisPrompt:
         assert "<market_snapshot>" in result
         assert "</market_snapshot>" in result
 
-    def test_contains_technical_indicators_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_technical_indicators_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -223,7 +250,16 @@ class TestBuildAnalysisPrompt:
         assert "<technical_indicators>" in result
         assert "</technical_indicators>" in result
 
-    def test_contains_current_positions_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_current_positions_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -235,7 +271,16 @@ class TestBuildAnalysisPrompt:
         assert "<current_positions>" in result
         assert "</current_positions>" in result
 
-    def test_contains_account_state_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_account_state_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -247,7 +292,16 @@ class TestBuildAnalysisPrompt:
         assert "<account_state>" in result
         assert "</account_state>" in result
 
-    def test_contains_research_context_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_research_context_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -259,7 +313,16 @@ class TestBuildAnalysisPrompt:
         assert "<research_context>" in result
         assert "</research_context>" in result
 
-    def test_contains_playbook_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_playbook_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -271,7 +334,16 @@ class TestBuildAnalysisPrompt:
         assert "<playbook>" in result
         assert "</playbook>" in result
 
-    def test_contains_recent_trades_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_recent_trades_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -283,7 +355,16 @@ class TestBuildAnalysisPrompt:
         assert "<recent_trades>" in result
         assert "</recent_trades>" in result
 
-    def test_contains_output_format_section(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_contains_output_format_section(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
             positions=sample_positions,
@@ -295,7 +376,15 @@ class TestBuildAnalysisPrompt:
         assert "<output_format>" in result
         assert "</output_format>" in result
 
-    def test_none_research_omits_content(self, builder, sample_snapshot, sample_positions, sample_account, sample_playbook, sample_recent_trades):
+    def test_none_research_omits_content(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         """When research is None, section should indicate no research available."""
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
@@ -308,7 +397,15 @@ class TestBuildAnalysisPrompt:
         assert "<research_context>" in result
         assert "No research" in result or "no research" in result or "None" in result
 
-    def test_empty_positions(self, builder, sample_snapshot, sample_account, sample_research, sample_playbook, sample_recent_trades):
+    def test_empty_positions(
+        self,
+        builder,
+        sample_snapshot,
+        sample_account,
+        sample_research,
+        sample_playbook,
+        sample_recent_trades,
+    ):
         """Empty positions list should still produce valid prompt."""
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
@@ -319,9 +416,21 @@ class TestBuildAnalysisPrompt:
             recent_trades=sample_recent_trades,
         )
         assert "<current_positions>" in result
-        assert "No open positions" in result or "no open positions" in result or "none" in result.lower()
+        assert (
+            "No open positions" in result
+            or "no open positions" in result
+            or "none" in result.lower()
+        )
 
-    def test_empty_trades_list(self, builder, sample_snapshot, sample_positions, sample_account, sample_research, sample_playbook):
+    def test_empty_trades_list(
+        self,
+        builder,
+        sample_snapshot,
+        sample_positions,
+        sample_account,
+        sample_research,
+        sample_playbook,
+    ):
         """Empty recent trades should still produce valid prompt."""
         result = builder.build_analysis_prompt(
             snapshot=sample_snapshot,
@@ -383,7 +492,9 @@ class TestBuildPostTradePrompt:
 
 
 class TestBuildDeepReflectionPrompt:
-    def test_returns_string(self, builder, sample_recent_trades, sample_playbook, sample_performance):
+    def test_returns_string(
+        self, builder, sample_recent_trades, sample_playbook, sample_performance
+    ):
         result = builder.build_deep_reflection_prompt(
             trades=sample_recent_trades,
             playbook=sample_playbook,
@@ -392,7 +503,9 @@ class TestBuildDeepReflectionPrompt:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_contains_performance_summary(self, builder, sample_recent_trades, sample_playbook, sample_performance):
+    def test_contains_performance_summary(
+        self, builder, sample_recent_trades, sample_playbook, sample_performance
+    ):
         result = builder.build_deep_reflection_prompt(
             trades=sample_recent_trades,
             playbook=sample_playbook,
@@ -401,7 +514,9 @@ class TestBuildDeepReflectionPrompt:
         assert "<performance_summary>" in result
         assert "</performance_summary>" in result
 
-    def test_contains_breakdown_by_strategy(self, builder, sample_recent_trades, sample_playbook, sample_performance):
+    def test_contains_breakdown_by_strategy(
+        self, builder, sample_recent_trades, sample_playbook, sample_performance
+    ):
         result = builder.build_deep_reflection_prompt(
             trades=sample_recent_trades,
             playbook=sample_playbook,
@@ -410,7 +525,9 @@ class TestBuildDeepReflectionPrompt:
         assert "<breakdown_by_strategy>" in result
         assert "</breakdown_by_strategy>" in result
 
-    def test_contains_breakdown_by_regime(self, builder, sample_recent_trades, sample_playbook, sample_performance):
+    def test_contains_breakdown_by_regime(
+        self, builder, sample_recent_trades, sample_playbook, sample_performance
+    ):
         result = builder.build_deep_reflection_prompt(
             trades=sample_recent_trades,
             playbook=sample_playbook,
@@ -419,7 +536,9 @@ class TestBuildDeepReflectionPrompt:
         assert "<breakdown_by_regime>" in result
         assert "</breakdown_by_regime>" in result
 
-    def test_contains_current_playbook(self, builder, sample_recent_trades, sample_playbook, sample_performance):
+    def test_contains_current_playbook(
+        self, builder, sample_recent_trades, sample_playbook, sample_performance
+    ):
         result = builder.build_deep_reflection_prompt(
             trades=sample_recent_trades,
             playbook=sample_playbook,
@@ -428,7 +547,9 @@ class TestBuildDeepReflectionPrompt:
         assert "<current_playbook>" in result
         assert "</current_playbook>" in result
 
-    def test_contains_tasks(self, builder, sample_recent_trades, sample_playbook, sample_performance):
+    def test_contains_tasks(
+        self, builder, sample_recent_trades, sample_playbook, sample_performance
+    ):
         result = builder.build_deep_reflection_prompt(
             trades=sample_recent_trades,
             playbook=sample_playbook,

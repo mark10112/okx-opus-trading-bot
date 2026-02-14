@@ -55,11 +55,13 @@ class ReflectionEngine:
             await self.trade_repo.update(trade_id, {"self_review": review_dict})
 
         # Save reflection log
-        await self.reflection_repo.save({
-            "reflection_type": "post_trade",
-            "trade_id": trade_id,
-            "content_json": review_dict,
-        })
+        await self.reflection_repo.save(
+            {
+                "reflection_type": "post_trade",
+                "trade_id": trade_id,
+                "content_json": review_dict,
+            }
+        )
 
         logger.info(
             "post_trade_reflection_complete",
@@ -99,10 +101,12 @@ class ReflectionEngine:
         await self._apply_playbook_update(result)
 
         # Save reflection log
-        await self.reflection_repo.save({
-            "reflection_type": "deep",
-            "content_json": result_dict,
-        })
+        await self.reflection_repo.save(
+            {
+                "reflection_type": "deep",
+                "content_json": result_dict,
+            }
+        )
 
         # Publish alert
         alert = SystemAlertMessage(

@@ -241,9 +241,7 @@ class TestPlaybookRepository:
             "triggered_by": "reflection",
             "performance_at_update": {"win_rate": 0.6},
         }
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "version", 2)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "version", 2))
 
         result = await repo.save_version(data)
         assert result == 2
@@ -308,9 +306,7 @@ class TestReflectionRepository:
             "old_version": 1,
             "new_version": None,
         }
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "id", 42)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", 42))
 
         result = await repo.save(data)
         assert result == 42
@@ -417,9 +413,7 @@ class TestScreenerLogRepository:
             "tokens_used": 50,
             "latency_ms": 200,
         }
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "id", 10)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", 10))
 
         result = await repo.log(data)
         assert result == 10
@@ -497,9 +491,7 @@ class TestResearchCacheRepository:
 
     async def test_save_returns_id(self, repo, mock_session):
         """save() should add ResearchCacheORM and return id."""
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "id", 5)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", 5))
 
         result = await repo.save("BTC outlook", {"summary": "bullish"})
         assert result == 5
@@ -519,9 +511,7 @@ class TestRiskRejectionRepository:
 
     async def test_log_returns_id(self, repo, mock_session):
         """log() should add RiskRejectionORM and return id."""
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "id", 7)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", 7))
 
         result = await repo.log(
             decision={"action": "OPEN_LONG", "size_pct": 0.10},
@@ -545,9 +535,7 @@ class TestPerformanceSnapshotRepository:
 
     async def test_save_returns_id(self, repo, mock_session):
         """save() should add PerformanceSnapshotORM and return id."""
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "id", 3)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", 3))
 
         data = {
             "equity": 10500.0,
@@ -566,18 +554,14 @@ class TestPerformanceSnapshotRepository:
 
     async def test_save_hourly(self, repo, mock_session):
         """save() should accept 'hourly' snapshot_type."""
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "id", 4)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", 4))
 
         result = await repo.save("hourly", {"equity": 10000.0})
         assert result == 4
 
     async def test_save_weekly(self, repo, mock_session):
         """save() should accept 'weekly' snapshot_type."""
-        mock_session.refresh = AsyncMock(
-            side_effect=lambda obj: setattr(obj, "id", 5)
-        )
+        mock_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", 5))
 
         result = await repo.save("weekly", {"equity": 11000.0})
         assert result == 5

@@ -148,14 +148,16 @@ class Orchestrator:
         if not bypass and self.settings.SCREENER_ENABLED and self.haiku_screener:
             screen_result = await self.haiku_screener.screen(snapshot)
             if self.screener_repo:
-                screener_log_id = await self.screener_repo.log({
-                    "symbol": instrument,
-                    "signal": screen_result.signal,
-                    "reason": screen_result.reason,
-                    "snapshot_json": snapshot,
-                    "tokens_used": screen_result.tokens_used,
-                    "latency_ms": screen_result.latency_ms,
-                })
+                screener_log_id = await self.screener_repo.log(
+                    {
+                        "symbol": instrument,
+                        "signal": screen_result.signal,
+                        "reason": screen_result.reason,
+                        "snapshot_json": snapshot,
+                        "tokens_used": screen_result.tokens_used,
+                        "latency_ms": screen_result.latency_ms,
+                    }
+                )
             if not screen_result.signal:
                 self._set_state(OrchestratorState.IDLE)
                 return
@@ -192,6 +194,7 @@ class Orchestrator:
             opus_result = await self.opus_client.analyze(prompt)
         else:
             from orchestrator.models.decision import OpusDecision
+
             opus_result = OpusDecision()
 
         action = opus_result.decision.action
@@ -222,9 +225,7 @@ class Orchestrator:
                     halt_rules = {"daily_loss", "max_drawdown"}
                     failed_rules = {f.rule for f in risk_result.failures}
                     if failed_rules & halt_rules:
-                        await self._handle_halt(
-                            f"Risk gate halt: {failed_rules & halt_rules}"
-                        )
+                        await self._handle_halt(f"Risk gate halt: {failed_rules & halt_rules}")
                         return
                     # Check if cooldown
                     if "cooldown" in failed_rules:
@@ -285,7 +286,9 @@ class Orchestrator:
                     "leverage": 1.0,
                     "confidence_at_entry": opus_result.confidence,
                     "strategy_used": opus_result.strategy_used,
-                    "market_regime": opus_result.analysis.market_regime if opus_result.analysis else "unknown",
+                    "market_regime": opus_result.analysis.market_regime
+                    if opus_result.analysis
+                    else "unknown",
                     "reasoning": opus_result.reasoning,
                     "fill_data": fill_data,
                 }

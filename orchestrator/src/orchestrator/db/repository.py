@@ -123,11 +123,7 @@ class PlaybookRepository:
     async def get_latest(self) -> dict | None:
         """Get the latest playbook version. Returns None if no versions exist."""
         async with self.session_factory() as session:
-            stmt = (
-                select(PlaybookVersionORM)
-                .order_by(PlaybookVersionORM.version.desc())
-                .limit(1)
-            )
+            stmt = select(PlaybookVersionORM).order_by(PlaybookVersionORM.version.desc()).limit(1)
             result = await session.execute(stmt)
             pb = result.scalar_one_or_none()
             if pb is None:
@@ -157,9 +153,7 @@ class PlaybookRepository:
         """Get playbook version history, ordered by version desc."""
         async with self.session_factory() as session:
             stmt = (
-                select(PlaybookVersionORM)
-                .order_by(PlaybookVersionORM.version.desc())
-                .limit(limit)
+                select(PlaybookVersionORM).order_by(PlaybookVersionORM.version.desc()).limit(limit)
             )
             result = await session.execute(stmt)
             return [
@@ -240,9 +234,7 @@ class ScreenerLogRepository:
             logger.info("screener_logged", id=log_id, signal=data.get("signal"))
             return log_id
 
-    async def update_opus_agreement(
-        self, log_id: int, opus_action: str, agreed: bool
-    ) -> None:
+    async def update_opus_agreement(self, log_id: int, opus_action: str, agreed: bool) -> None:
         """Update a screener log with Opus agreement info."""
         async with self.session_factory() as session:
             stmt = select(ScreenerLogORM).where(ScreenerLogORM.id == log_id)
@@ -254,9 +246,7 @@ class ScreenerLogRepository:
             log_entry.opus_agreed = agreed
             await session.flush()
             await session.commit()
-            logger.info(
-                "screener_opus_updated", id=log_id, action=opus_action, agreed=agreed
-            )
+            logger.info("screener_opus_updated", id=log_id, action=opus_action, agreed=agreed)
 
 
 class ResearchCacheRepository:
@@ -302,9 +292,7 @@ class RiskRejectionRepository:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self.session_factory = session_factory
 
-    async def log(
-        self, decision: dict, failed_rules: list, account_state: dict
-    ) -> int:
+    async def log(self, decision: dict, failed_rules: list, account_state: dict) -> int:
         """Log a risk rejection. Returns id."""
         async with self.session_factory() as session:
             orm = RiskRejectionORM(

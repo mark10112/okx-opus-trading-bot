@@ -19,38 +19,42 @@ from orchestrator.reflection_engine import ReflectionEngine
 @pytest.fixture
 def mock_opus():
     opus = AsyncMock()
-    opus.reflect_trade = AsyncMock(return_value=TradeReview(
-        outcome="win",
-        execution_quality="good",
-        entry_timing="good",
-        exit_timing="early",
-        what_went_right=["Good entry"],
-        what_went_wrong=["Exited early"],
-        lesson="Hold winners longer",
-        should_update_playbook=False,
-    ))
-    opus.deep_reflect = AsyncMock(return_value=DeepReflectionResult(
-        updated_playbook=Playbook(
-            version=2,
-            market_regime_rules={
-                "trending_up": RegimeRule(
-                    preferred_strategies=["momentum"],
-                    max_position_pct=0.05,
-                ),
-            },
-            strategy_definitions={
-                "momentum": StrategyDef(
-                    entry="EMA20 > EMA50",
-                    exit="RSI > 80",
-                    historical_winrate=0.67,
-                ),
-            },
-        ),
-        pattern_insights=["Momentum works best in trends"],
-        bias_findings=["Exit winners too early"],
-        discipline_score=80,
-        summary="Good overall performance",
-    ))
+    opus.reflect_trade = AsyncMock(
+        return_value=TradeReview(
+            outcome="win",
+            execution_quality="good",
+            entry_timing="good",
+            exit_timing="early",
+            what_went_right=["Good entry"],
+            what_went_wrong=["Exited early"],
+            lesson="Hold winners longer",
+            should_update_playbook=False,
+        )
+    )
+    opus.deep_reflect = AsyncMock(
+        return_value=DeepReflectionResult(
+            updated_playbook=Playbook(
+                version=2,
+                market_regime_rules={
+                    "trending_up": RegimeRule(
+                        preferred_strategies=["momentum"],
+                        max_position_pct=0.05,
+                    ),
+                },
+                strategy_definitions={
+                    "momentum": StrategyDef(
+                        entry="EMA20 > EMA50",
+                        exit="RSI > 80",
+                        historical_winrate=0.67,
+                    ),
+                },
+            ),
+            pattern_insights=["Momentum works best in trends"],
+            bias_findings=["Exit winners too early"],
+            discipline_score=80,
+            summary="Good overall performance",
+        )
+    )
     return opus
 
 
@@ -94,7 +98,14 @@ def mock_redis():
 
 
 @pytest.fixture
-def engine(mock_opus, mock_playbook_mgr, mock_prompt_builder, mock_trade_repo, mock_reflection_repo, mock_redis):
+def engine(
+    mock_opus,
+    mock_playbook_mgr,
+    mock_prompt_builder,
+    mock_trade_repo,
+    mock_reflection_repo,
+    mock_redis,
+):
     return ReflectionEngine(
         opus=mock_opus,
         playbook_mgr=mock_playbook_mgr,

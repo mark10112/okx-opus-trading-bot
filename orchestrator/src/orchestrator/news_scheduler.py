@@ -56,8 +56,14 @@ class NewsScheduler:
         """Load hardcoded 2026 schedule + any dynamic events."""
         # 2026 FOMC meeting dates (announcement day, 14:00 ET = 18:00 UTC)
         fomc_dates = [
-            (1, 28), (3, 18), (5, 6), (6, 17),
-            (7, 29), (9, 16), (11, 4), (12, 16),
+            (1, 28),
+            (3, 18),
+            (5, 6),
+            (6, 17),
+            (7, 29),
+            (9, 16),
+            (11, 4),
+            (12, 16),
         ]
         for month, day in fomc_dates:
             self.events.append(
@@ -70,9 +76,18 @@ class NewsScheduler:
 
         # 2026 CPI release dates (typically 2nd week, 08:30 ET = 12:30 UTC)
         cpi_dates = [
-            (1, 13), (2, 11), (3, 11), (4, 14),
-            (5, 12), (6, 10), (7, 14), (8, 12),
-            (9, 15), (10, 13), (11, 10), (12, 10),
+            (1, 13),
+            (2, 11),
+            (3, 11),
+            (4, 14),
+            (5, 12),
+            (6, 10),
+            (7, 14),
+            (8, 12),
+            (9, 15),
+            (10, 13),
+            (11, 10),
+            (12, 10),
         ]
         for month, day in cpi_dates:
             self.events.append(
@@ -85,9 +100,18 @@ class NewsScheduler:
 
         # 2026 NFP release dates (first Friday, 08:30 ET = 12:30 UTC)
         nfp_dates = [
-            (1, 9), (2, 6), (3, 6), (4, 3),
-            (5, 8), (6, 5), (7, 2), (8, 7),
-            (9, 4), (10, 2), (11, 6), (12, 4),
+            (1, 9),
+            (2, 6),
+            (3, 6),
+            (4, 3),
+            (5, 8),
+            (6, 5),
+            (7, 2),
+            (8, 7),
+            (9, 4),
+            (10, 2),
+            (11, 6),
+            (12, 4),
         ]
         for month, day in nfp_dates:
             self.events.append(
@@ -100,7 +124,10 @@ class NewsScheduler:
 
         # 2026 GDP release dates (quarterly, 08:30 ET = 12:30 UTC)
         gdp_dates = [
-            (1, 29), (4, 29), (7, 29), (10, 29),
+            (1, 29),
+            (4, 29),
+            (7, 29),
+            (10, 29),
         ]
         for month, day in gdp_dates:
             self.events.append(

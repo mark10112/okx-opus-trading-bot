@@ -36,83 +36,89 @@ def client(settings):
 
 @pytest.fixture
 def valid_decision_json():
-    return json.dumps({
-        "analysis": {
-            "market_regime": "trending_up",
-            "bias": "bullish",
-            "key_observations": ["EMA alignment bullish", "RSI healthy"],
-            "risk_factors": ["Funding rate elevated"],
-        },
-        "decision": {
-            "action": "OPEN_LONG",
-            "symbol": "BTC-USDT-SWAP",
-            "size_pct": 0.03,
-            "entry_price": 60000.0,
-            "stop_loss": 58500.0,
-            "take_profit": 63000.0,
-            "order_type": "market",
-            "limit_price": None,
-        },
-        "confidence": 0.75,
-        "strategy_used": "momentum",
-        "reasoning": "Strong trend with healthy pullback to EMA20 support.",
-    })
+    return json.dumps(
+        {
+            "analysis": {
+                "market_regime": "trending_up",
+                "bias": "bullish",
+                "key_observations": ["EMA alignment bullish", "RSI healthy"],
+                "risk_factors": ["Funding rate elevated"],
+            },
+            "decision": {
+                "action": "OPEN_LONG",
+                "symbol": "BTC-USDT-SWAP",
+                "size_pct": 0.03,
+                "entry_price": 60000.0,
+                "stop_loss": 58500.0,
+                "take_profit": 63000.0,
+                "order_type": "market",
+                "limit_price": None,
+            },
+            "confidence": 0.75,
+            "strategy_used": "momentum",
+            "reasoning": "Strong trend with healthy pullback to EMA20 support.",
+        }
+    )
 
 
 @pytest.fixture
 def valid_review_json():
-    return json.dumps({
-        "outcome": "win",
-        "execution_quality": "good",
-        "entry_timing": "good",
-        "exit_timing": "early",
-        "what_went_right": ["Correct trend identification", "Good entry timing"],
-        "what_went_wrong": ["Exited too early, missed 30% of the move"],
-        "lesson": "Hold winners longer when trend is strong",
-        "should_update_playbook": True,
-        "playbook_suggestion": "Add trailing stop rule for trending markets",
-    })
+    return json.dumps(
+        {
+            "outcome": "win",
+            "execution_quality": "good",
+            "entry_timing": "good",
+            "exit_timing": "early",
+            "what_went_right": ["Correct trend identification", "Good entry timing"],
+            "what_went_wrong": ["Exited too early, missed 30% of the move"],
+            "lesson": "Hold winners longer when trend is strong",
+            "should_update_playbook": True,
+            "playbook_suggestion": "Add trailing stop rule for trending markets",
+        }
+    )
 
 
 @pytest.fixture
 def valid_deep_reflection_json():
-    return json.dumps({
-        "updated_playbook": {
-            "version": 2,
-            "market_regime_rules": {
-                "trending_up": {
-                    "preferred_strategies": ["momentum", "breakout"],
-                    "avoid_strategies": ["mean_reversion"],
-                    "max_position_pct": 0.05,
-                    "preferred_timeframe": "1H",
+    return json.dumps(
+        {
+            "updated_playbook": {
+                "version": 2,
+                "market_regime_rules": {
+                    "trending_up": {
+                        "preferred_strategies": ["momentum", "breakout"],
+                        "avoid_strategies": ["mean_reversion"],
+                        "max_position_pct": 0.05,
+                        "preferred_timeframe": "1H",
+                    },
                 },
+                "strategy_definitions": {
+                    "momentum": {
+                        "entry": "EMA20 > EMA50 > EMA200",
+                        "exit": "Trailing stop or RSI > 80",
+                        "filters": [],
+                        "historical_winrate": 0.67,
+                        "avg_rr": 2.1,
+                    },
+                },
+                "lessons_learned": [
+                    {
+                        "id": "L1",
+                        "date": "2026-02-15",
+                        "lesson": "Hold winners longer",
+                        "evidence": "3 trades exited early",
+                        "impact": "high",
+                    },
+                ],
+                "confidence_calibration": {},
+                "time_filters": {"avoid_hours_utc": [], "preferred_hours_utc": []},
             },
-            "strategy_definitions": {
-                "momentum": {
-                    "entry": "EMA20 > EMA50 > EMA200",
-                    "exit": "Trailing stop or RSI > 80",
-                    "filters": [],
-                    "historical_winrate": 0.67,
-                    "avg_rr": 2.1,
-                },
-            },
-            "lessons_learned": [
-                {
-                    "id": "L1",
-                    "date": "2026-02-15",
-                    "lesson": "Hold winners longer",
-                    "evidence": "3 trades exited early",
-                    "impact": "high",
-                },
-            ],
-            "confidence_calibration": {},
-            "time_filters": {"avoid_hours_utc": [], "preferred_hours_utc": []},
-        },
-        "pattern_insights": ["Momentum trades perform best in trending_up regime"],
-        "bias_findings": ["Tendency to exit winners too early"],
-        "discipline_score": 80,
-        "summary": "Overall good performance with room for improvement in exit timing.",
-    })
+            "pattern_insights": ["Momentum trades perform best in trending_up regime"],
+            "bias_findings": ["Tendency to exit winners too early"],
+            "discipline_score": 80,
+            "summary": "Overall good performance with room for improvement in exit timing.",
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -129,13 +135,15 @@ class TestParseDecision:
         assert result.strategy_used == "momentum"
 
     def test_valid_json_hold(self, client):
-        text = json.dumps({
-            "analysis": {"market_regime": "ranging", "bias": "neutral"},
-            "decision": {"action": "HOLD"},
-            "confidence": 0.0,
-            "strategy_used": "",
-            "reasoning": "No clear setup",
-        })
+        text = json.dumps(
+            {
+                "analysis": {"market_regime": "ranging", "bias": "neutral"},
+                "decision": {"action": "HOLD"},
+                "confidence": 0.0,
+                "strategy_used": "",
+                "reasoning": "No clear setup",
+            }
+        )
         result = client._parse_decision(text)
         assert result.decision.action == "HOLD"
 

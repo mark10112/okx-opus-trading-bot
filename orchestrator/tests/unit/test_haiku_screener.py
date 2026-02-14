@@ -117,7 +117,11 @@ class TestParseResponse:
         text = "This is not JSON at all"
         result = screener._parse_response(text)
         assert result.signal is True
-        assert "parse" in result.reason.lower() or "error" in result.reason.lower() or "malformed" in result.reason.lower()
+        assert (
+            "parse" in result.reason.lower()
+            or "error" in result.reason.lower()
+            or "malformed" in result.reason.lower()
+        )
 
     def test_missing_signal_field(self, screener):
         """Missing 'signal' field should default to signal=True."""

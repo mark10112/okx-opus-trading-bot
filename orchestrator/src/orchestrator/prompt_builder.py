@@ -35,8 +35,12 @@ class PromptBuilder:
         parts.append(f"Bid: {ticker.get('bid', 0.0)} | Ask: {ticker.get('ask', 0.0)}")
         parts.append(f"Regime: {regime}")
         parts.append(f"Price Change 1H: {snapshot.get('price_change_1h', 0.0):.4f}")
-        parts.append(f"Funding Rate: {funding.get('current', 0.0):.6f} (predicted: {funding.get('predicted', 0.0):.6f})")
-        parts.append(f"Open Interest: {oi.get('oi', 0)} (24h change: {oi.get('oi_change_24h', 0.0):.4f})")
+        parts.append(
+            f"Funding Rate: {funding.get('current', 0.0):.6f} (predicted: {funding.get('predicted', 0.0):.6f})"
+        )
+        parts.append(
+            f"Open Interest: {oi.get('oi', 0)} (24h change: {oi.get('oi_change_24h', 0.0):.4f})"
+        )
         parts.append(f"Long/Short Ratio: {snapshot.get('long_short_ratio', 1.0):.2f}")
         parts.append(f"Orderbook Spread: {orderbook.get('spread', 0.0):.2f}")
         parts.append("</market_snapshot>")
@@ -49,23 +53,33 @@ class PromptBuilder:
             parts.append(f"  RSI: {ind.get('rsi', 'N/A')}")
             macd = ind.get("macd", {})
             if isinstance(macd, dict):
-                parts.append(f"  MACD: line={macd.get('line', 0):.2f} signal={macd.get('signal', 0):.2f} hist={macd.get('histogram', 0):.2f}")
+                parts.append(
+                    f"  MACD: line={macd.get('line', 0):.2f} signal={macd.get('signal', 0):.2f} hist={macd.get('histogram', 0):.2f}"
+                )
             bb = ind.get("bollinger", {})
             if isinstance(bb, dict):
-                parts.append(f"  BB: upper={bb.get('upper', 0):.0f} mid={bb.get('middle', 0):.0f} lower={bb.get('lower', 0):.0f}")
+                parts.append(
+                    f"  BB: upper={bb.get('upper', 0):.0f} mid={bb.get('middle', 0):.0f} lower={bb.get('lower', 0):.0f}"
+                )
             ema = ind.get("ema", {})
             if ema:
-                ema_str = ", ".join(f"EMA{k}={v:.0f}" for k, v in sorted(ema.items(), key=lambda x: int(x[0])))
+                ema_str = ", ".join(
+                    f"EMA{k}={v:.0f}" for k, v in sorted(ema.items(), key=lambda x: int(x[0]))
+                )
                 parts.append(f"  EMA: {ema_str}")
             parts.append(f"  ATR: {ind.get('atr', 'N/A')} | ADX: {ind.get('adx', 'N/A')}")
-            parts.append(f"  BB Position: {ind.get('bb_position', 'N/A')} | EMA Alignment: {ind.get('ema_alignment', 'N/A')} | MACD Signal: {ind.get('macd_signal', 'N/A')}")
+            parts.append(
+                f"  BB Position: {ind.get('bb_position', 'N/A')} | EMA Alignment: {ind.get('ema_alignment', 'N/A')} | MACD Signal: {ind.get('macd_signal', 'N/A')}"
+            )
         parts.append("</technical_indicators>")
 
         # --- Current Positions ---
         parts.append("<current_positions>")
         if positions:
             for pos in positions:
-                parts.append(f"  {pos.get('instId', 'N/A')} {pos.get('posSide', 'N/A')}: size={pos.get('pos', 0)} avgPx={pos.get('avgPx', 0)} upl={pos.get('upl', 0)} lever={pos.get('lever', 1)}")
+                parts.append(
+                    f"  {pos.get('instId', 'N/A')} {pos.get('posSide', 'N/A')}: size={pos.get('pos', 0)} avgPx={pos.get('avgPx', 0)} upl={pos.get('upl', 0)} lever={pos.get('lever', 1)}"
+                )
         else:
             parts.append("  No open positions")
         parts.append("</current_positions>")
@@ -101,24 +115,32 @@ class PromptBuilder:
             for r_name, r_rule in regime_rules.items():
                 preferred = r_rule.get("preferred_strategies", [])
                 avoid = r_rule.get("avoid_strategies", [])
-                parts.append(f"  {r_name}: prefer={preferred}, avoid={avoid}, max_pos={r_rule.get('max_position_pct', 0)}")
+                parts.append(
+                    f"  {r_name}: prefer={preferred}, avoid={avoid}, max_pos={r_rule.get('max_position_pct', 0)}"
+                )
         strategies = playbook.get("strategy_definitions", {})
         if strategies:
             parts.append("Strategies:")
             for s_name, s_def in strategies.items():
-                parts.append(f"  {s_name}: entry='{s_def.get('entry', '')}' exit='{s_def.get('exit', '')}'")
+                parts.append(
+                    f"  {s_name}: entry='{s_def.get('entry', '')}' exit='{s_def.get('exit', '')}'"
+                )
         lessons = playbook.get("lessons_learned", [])
         if lessons:
             parts.append("Lessons:")
             for lesson in lessons:
-                parts.append(f"  - {lesson.get('lesson', '')} (impact: {lesson.get('impact', 'N/A')})")
+                parts.append(
+                    f"  - {lesson.get('lesson', '')} (impact: {lesson.get('impact', 'N/A')})"
+                )
         parts.append("</playbook>")
 
         # --- Recent Trades ---
         parts.append("<recent_trades>")
         if recent_trades:
             for t in recent_trades:
-                parts.append(f"  {t.get('trade_id', 'N/A')}: {t.get('direction', 'N/A')} {t.get('symbol', 'N/A')} | PnL: {t.get('pnl_usd', 0):.2f} ({t.get('pnl_pct', 0):.3f}) | strategy={t.get('strategy_used', 'N/A')} conf={t.get('confidence_at_entry', 0):.2f}")
+                parts.append(
+                    f"  {t.get('trade_id', 'N/A')}: {t.get('direction', 'N/A')} {t.get('symbol', 'N/A')} | PnL: {t.get('pnl_usd', 0):.2f} ({t.get('pnl_pct', 0):.3f}) | strategy={t.get('strategy_used', 'N/A')} conf={t.get('confidence_at_entry', 0):.2f}"
+                )
         else:
             parts.append("  No recent trades")
         parts.append("</recent_trades>")
@@ -126,27 +148,32 @@ class PromptBuilder:
         # --- Output Format ---
         parts.append("<output_format>")
         parts.append("Respond with a single JSON object:")
-        parts.append(json.dumps({
-            "analysis": {
-                "market_regime": "trending_up|trending_down|volatile|ranging",
-                "bias": "bullish|bearish|neutral",
-                "key_observations": ["..."],
-                "risk_factors": ["..."],
-            },
-            "decision": {
-                "action": "OPEN_LONG|OPEN_SHORT|CLOSE|ADD|REDUCE|HOLD",
-                "symbol": "BTC-USDT-SWAP",
-                "size_pct": 0.03,
-                "entry_price": 60000.0,
-                "stop_loss": 58500.0,
-                "take_profit": 63000.0,
-                "order_type": "market|limit",
-                "limit_price": None,
-            },
-            "confidence": 0.75,
-            "strategy_used": "momentum|mean_reversion|breakout|scalp",
-            "reasoning": "Detailed reasoning for the decision...",
-        }, indent=2))
+        parts.append(
+            json.dumps(
+                {
+                    "analysis": {
+                        "market_regime": "trending_up|trending_down|volatile|ranging",
+                        "bias": "bullish|bearish|neutral",
+                        "key_observations": ["..."],
+                        "risk_factors": ["..."],
+                    },
+                    "decision": {
+                        "action": "OPEN_LONG|OPEN_SHORT|CLOSE|ADD|REDUCE|HOLD",
+                        "symbol": "BTC-USDT-SWAP",
+                        "size_pct": 0.03,
+                        "entry_price": 60000.0,
+                        "stop_loss": 58500.0,
+                        "take_profit": 63000.0,
+                        "order_type": "market|limit",
+                        "limit_price": None,
+                    },
+                    "confidence": 0.75,
+                    "strategy_used": "momentum|mean_reversion|breakout|scalp",
+                    "reasoning": "Detailed reasoning for the decision...",
+                },
+                indent=2,
+            )
+        )
         parts.append("</output_format>")
 
         return "\n".join(parts)
@@ -186,17 +213,22 @@ class PromptBuilder:
         parts.append("")
         parts.append("<output_format>")
         parts.append("Respond with a single JSON object:")
-        parts.append(json.dumps({
-            "outcome": "win|loss|breakeven",
-            "execution_quality": "excellent|good|fair|poor",
-            "entry_timing": "early|good|late|missed",
-            "exit_timing": "early|good|late|stopped_out",
-            "what_went_right": ["..."],
-            "what_went_wrong": ["..."],
-            "lesson": "Key takeaway from this trade",
-            "should_update_playbook": False,
-            "playbook_suggestion": "null or suggestion string",
-        }, indent=2))
+        parts.append(
+            json.dumps(
+                {
+                    "outcome": "win|loss|breakeven",
+                    "execution_quality": "excellent|good|fair|poor",
+                    "entry_timing": "early|good|late|missed",
+                    "exit_timing": "early|good|late|stopped_out",
+                    "what_went_right": ["..."],
+                    "what_went_wrong": ["..."],
+                    "lesson": "Key takeaway from this trade",
+                    "should_update_playbook": False,
+                    "playbook_suggestion": "null or suggestion string",
+                },
+                indent=2,
+            )
+        )
         parts.append("</output_format>")
 
         return "\n".join(parts)
@@ -220,14 +252,18 @@ class PromptBuilder:
         parts.append("<breakdown_by_strategy>")
         by_strategy = performance.get("by_strategy", {})
         for s_name, s_data in by_strategy.items():
-            parts.append(f"  {s_name}: trades={s_data.get('trades', 0)} win_rate={s_data.get('win_rate', 0.0):.2%} pnl={s_data.get('pnl', 0.0):.2f}")
+            parts.append(
+                f"  {s_name}: trades={s_data.get('trades', 0)} win_rate={s_data.get('win_rate', 0.0):.2%} pnl={s_data.get('pnl', 0.0):.2f}"
+            )
         parts.append("</breakdown_by_strategy>")
 
         # --- Breakdown by Regime ---
         parts.append("<breakdown_by_regime>")
         by_regime = performance.get("by_regime", {})
         for r_name, r_data in by_regime.items():
-            parts.append(f"  {r_name}: trades={r_data.get('trades', 0)} win_rate={r_data.get('win_rate', 0.0):.2%} pnl={r_data.get('pnl', 0.0):.2f}")
+            parts.append(
+                f"  {r_name}: trades={r_data.get('trades', 0)} win_rate={r_data.get('win_rate', 0.0):.2%} pnl={r_data.get('pnl', 0.0):.2f}"
+            )
         parts.append("</breakdown_by_regime>")
 
         # --- Current Playbook ---
@@ -237,12 +273,16 @@ class PromptBuilder:
         if regime_rules:
             parts.append("Regime Rules:")
             for r_name, r_rule in regime_rules.items():
-                parts.append(f"  {r_name}: prefer={r_rule.get('preferred_strategies', [])}, avoid={r_rule.get('avoid_strategies', [])}")
+                parts.append(
+                    f"  {r_name}: prefer={r_rule.get('preferred_strategies', [])}, avoid={r_rule.get('avoid_strategies', [])}"
+                )
         strategies = playbook.get("strategy_definitions", {})
         if strategies:
             parts.append("Strategies:")
             for s_name, s_def in strategies.items():
-                parts.append(f"  {s_name}: entry='{s_def.get('entry', '')}' exit='{s_def.get('exit', '')}'")
+                parts.append(
+                    f"  {s_name}: entry='{s_def.get('entry', '')}' exit='{s_def.get('exit', '')}'"
+                )
         lessons = playbook.get("lessons_learned", [])
         if lessons:
             parts.append("Lessons:")
@@ -253,7 +293,9 @@ class PromptBuilder:
         # --- Recent Trades Detail ---
         parts.append("<recent_trades>")
         for t in trades:
-            parts.append(f"  {t.get('trade_id', 'N/A')}: {t.get('direction', 'N/A')} {t.get('symbol', 'N/A')} | PnL: {t.get('pnl_usd', 0):.2f} | strategy={t.get('strategy_used', 'N/A')} conf={t.get('confidence_at_entry', 0):.2f}")
+            parts.append(
+                f"  {t.get('trade_id', 'N/A')}: {t.get('direction', 'N/A')} {t.get('symbol', 'N/A')} | PnL: {t.get('pnl_usd', 0):.2f} | strategy={t.get('strategy_used', 'N/A')} conf={t.get('confidence_at_entry', 0):.2f}"
+            )
         parts.append("</recent_trades>")
 
         # --- Tasks ---
@@ -265,20 +307,25 @@ class PromptBuilder:
         parts.append("5. Propose specific playbook updates with reasoning")
         parts.append("")
         parts.append("Respond with a single JSON object:")
-        parts.append(json.dumps({
-            "updated_playbook": {
-                "version": "incremented",
-                "market_regime_rules": {},
-                "strategy_definitions": {},
-                "lessons_learned": [],
-                "confidence_calibration": {},
-                "time_filters": {},
-            },
-            "pattern_insights": ["..."],
-            "bias_findings": ["..."],
-            "discipline_score": 75,
-            "summary": "Overall assessment...",
-        }, indent=2))
+        parts.append(
+            json.dumps(
+                {
+                    "updated_playbook": {
+                        "version": "incremented",
+                        "market_regime_rules": {},
+                        "strategy_definitions": {},
+                        "lessons_learned": [],
+                        "confidence_calibration": {},
+                        "time_filters": {},
+                    },
+                    "pattern_insights": ["..."],
+                    "bias_findings": ["..."],
+                    "discipline_score": 75,
+                    "summary": "Overall assessment...",
+                },
+                indent=2,
+            )
+        )
         parts.append("</tasks>")
 
         return "\n".join(parts)
@@ -305,7 +352,9 @@ class PromptBuilder:
             parts.append(f"Elevated funding rate: {funding_rate:.4%}.")
             parts.append("What is driving the funding rate? Is there a crowded trade?")
 
-        parts.append("What are the key macro and crypto-specific factors affecting BTC price right now?")
+        parts.append(
+            "What are the key macro and crypto-specific factors affecting BTC price right now?"
+        )
         parts.append("Any upcoming events or catalysts in the next 24 hours?")
 
         return " ".join(parts)

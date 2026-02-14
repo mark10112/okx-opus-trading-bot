@@ -51,9 +51,7 @@ class OpusClient:
         text = await self._call(DEEP_REFLECTION_SYSTEM_PROMPT, prompt, temperature=0.3)
         return self._parse_deep_reflection(text)
 
-    async def _call(
-        self, system: str, user: str, temperature: float = 0.2
-    ) -> str:
+    async def _call(self, system: str, user: str, temperature: float = 0.2) -> str:
         """Low-level Anthropic API call with timeout."""
         try:
             client = AsyncAnthropic(api_key=self.settings.ANTHROPIC_API_KEY)

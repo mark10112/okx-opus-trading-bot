@@ -44,16 +44,18 @@ def valid_api_response():
         "choices": [
             {
                 "message": {
-                    "content": json.dumps({
-                        "summary": "Fed signals rate pause, bullish for crypto.",
-                        "sentiment": "bullish",
-                        "impact_level": "high",
-                        "time_horizon": "short",
-                        "key_points": ["Rate pause likely", "Institutional inflows up"],
-                        "trading_implication": "Bullish bias for BTC in short term",
-                        "confidence": 0.8,
-                        "sources": ["Reuters", "Bloomberg"],
-                    })
+                    "content": json.dumps(
+                        {
+                            "summary": "Fed signals rate pause, bullish for crypto.",
+                            "sentiment": "bullish",
+                            "impact_level": "high",
+                            "time_horizon": "short",
+                            "key_points": ["Rate pause likely", "Institutional inflows up"],
+                            "trading_implication": "Bullish bias for BTC in short term",
+                            "confidence": 0.8,
+                            "sources": ["Reuters", "Bloomberg"],
+                        }
+                    )
                 }
             }
         ]
@@ -165,7 +167,11 @@ class TestCallApi:
             await client._call_api("query")
 
             call_kwargs = mock_http.post.call_args
-            body = call_kwargs[1].get("json") or call_kwargs[0][1] if len(call_kwargs[0]) > 1 else call_kwargs[1]["json"]
+            body = (
+                call_kwargs[1].get("json") or call_kwargs[0][1]
+                if len(call_kwargs[0]) > 1
+                else call_kwargs[1]["json"]
+            )
             assert body["model"] == "sonar-pro"
 
 

@@ -207,31 +207,23 @@ class TestCheckTotalExposure:
 class TestCheckTradeSize:
     def test_below_threshold_passes(self, gate):
         """3% size < 5% -> pass."""
-        result = gate._check_trade_size(
-            {"size_pct": 0.03}, {"equity": 10000.0}
-        )
+        result = gate._check_trade_size({"size_pct": 0.03}, {"equity": 10000.0})
         assert result.passed is True
 
     def test_at_threshold_fails(self, gate):
         """5% size = exactly threshold -> fail."""
-        result = gate._check_trade_size(
-            {"size_pct": 0.05}, {"equity": 10000.0}
-        )
+        result = gate._check_trade_size({"size_pct": 0.05}, {"equity": 10000.0})
         assert result.passed is False
         assert "trade_size" in result.rule
 
     def test_above_threshold_fails(self, gate):
         """8% size > 5% -> fail."""
-        result = gate._check_trade_size(
-            {"size_pct": 0.08}, {"equity": 10000.0}
-        )
+        result = gate._check_trade_size({"size_pct": 0.08}, {"equity": 10000.0})
         assert result.passed is False
 
     def test_zero_size_passes(self, gate):
         """0% size -> pass."""
-        result = gate._check_trade_size(
-            {"size_pct": 0.0}, {"equity": 10000.0}
-        )
+        result = gate._check_trade_size({"size_pct": 0.0}, {"equity": 10000.0})
         assert result.passed is True
 
 
@@ -299,57 +291,69 @@ class TestCheckStopLoss:
 class TestCheckSlDistance:
     def test_below_threshold_passes(self, gate):
         """SL at 1.5% from entry -> pass."""
-        result = gate._check_sl_distance({
-            "entry_price": 60000.0,
-            "stop_loss": 59100.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_sl_distance(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 59100.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is True
 
     def test_at_threshold_fails(self, gate):
         """SL at exactly 3% from entry -> fail."""
-        result = gate._check_sl_distance({
-            "entry_price": 60000.0,
-            "stop_loss": 58200.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_sl_distance(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 58200.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is False
         assert "sl_distance" in result.rule
 
     def test_above_threshold_fails(self, gate):
         """SL at 5% from entry -> fail."""
-        result = gate._check_sl_distance({
-            "entry_price": 60000.0,
-            "stop_loss": 57000.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_sl_distance(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 57000.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is False
 
     def test_short_below_threshold_passes(self, gate):
         """Short: SL at 1% above entry -> pass."""
-        result = gate._check_sl_distance({
-            "entry_price": 60000.0,
-            "stop_loss": 60600.0,
-            "action": "OPEN_SHORT",
-        })
+        result = gate._check_sl_distance(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 60600.0,
+                "action": "OPEN_SHORT",
+            }
+        )
         assert result.passed is True
 
     def test_short_at_threshold_fails(self, gate):
         """Short: SL at exactly 3% above entry -> fail."""
-        result = gate._check_sl_distance({
-            "entry_price": 60000.0,
-            "stop_loss": 61800.0,
-            "action": "OPEN_SHORT",
-        })
+        result = gate._check_sl_distance(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 61800.0,
+                "action": "OPEN_SHORT",
+            }
+        )
         assert result.passed is False
 
     def test_missing_entry_price_passes(self, gate):
         """If entry_price is missing/0, skip check (pass)."""
-        result = gate._check_sl_distance({
-            "entry_price": 0.0,
-            "stop_loss": 59000.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_sl_distance(
+            {
+                "entry_price": 0.0,
+                "stop_loss": 59000.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is True
 
 
@@ -361,63 +365,75 @@ class TestCheckSlDistance:
 class TestCheckRrRatio:
     def test_above_threshold_passes(self, gate):
         """R:R = 2.0 > 1.5 -> pass."""
-        result = gate._check_rr_ratio({
-            "entry_price": 60000.0,
-            "stop_loss": 59000.0,
-            "take_profit": 62000.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_rr_ratio(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 59000.0,
+                "take_profit": 62000.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is True
 
     def test_at_threshold_passes(self, gate):
         """R:R = exactly 1.5 -> pass (>= threshold)."""
-        result = gate._check_rr_ratio({
-            "entry_price": 60000.0,
-            "stop_loss": 59000.0,
-            "take_profit": 61500.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_rr_ratio(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 59000.0,
+                "take_profit": 61500.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is True
 
     def test_below_threshold_fails(self, gate):
         """R:R = 1.0 < 1.5 -> fail."""
-        result = gate._check_rr_ratio({
-            "entry_price": 60000.0,
-            "stop_loss": 59000.0,
-            "take_profit": 61000.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_rr_ratio(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 59000.0,
+                "take_profit": 61000.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is False
         assert "rr_ratio" in result.rule
 
     def test_no_take_profit_passes(self, gate):
         """If take_profit is missing/0, skip check (pass)."""
-        result = gate._check_rr_ratio({
-            "entry_price": 60000.0,
-            "stop_loss": 59000.0,
-            "take_profit": 0.0,
-            "action": "OPEN_LONG",
-        })
+        result = gate._check_rr_ratio(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 59000.0,
+                "take_profit": 0.0,
+                "action": "OPEN_LONG",
+            }
+        )
         assert result.passed is True
 
     def test_short_above_threshold_passes(self, gate):
         """Short: R:R = 2.0 > 1.5 -> pass."""
-        result = gate._check_rr_ratio({
-            "entry_price": 60000.0,
-            "stop_loss": 61000.0,
-            "take_profit": 58000.0,
-            "action": "OPEN_SHORT",
-        })
+        result = gate._check_rr_ratio(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 61000.0,
+                "take_profit": 58000.0,
+                "action": "OPEN_SHORT",
+            }
+        )
         assert result.passed is True
 
     def test_short_below_threshold_fails(self, gate):
         """Short: R:R = 0.5 < 1.5 -> fail."""
-        result = gate._check_rr_ratio({
-            "entry_price": 60000.0,
-            "stop_loss": 61000.0,
-            "take_profit": 59500.0,
-            "action": "OPEN_SHORT",
-        })
+        result = gate._check_rr_ratio(
+            {
+                "entry_price": 60000.0,
+                "stop_loss": 61000.0,
+                "take_profit": 59500.0,
+                "action": "OPEN_SHORT",
+            }
+        )
         assert result.passed is False
 
 
@@ -454,17 +470,13 @@ class TestCheckCooldown:
 class TestCheckCorrelation:
     def test_no_positions_passes(self, gate):
         """No existing positions -> pass."""
-        result = gate._check_correlation(
-            {"symbol": "BTC-USDT-SWAP"}, []
-        )
+        result = gate._check_correlation({"symbol": "BTC-USDT-SWAP"}, [])
         assert result.passed is True
 
     def test_same_symbol_warns(self, gate):
         """Same symbol already in positions -> warning (still passes)."""
         positions = [{"instId": "BTC-USDT-SWAP"}]
-        result = gate._check_correlation(
-            {"symbol": "BTC-USDT-SWAP"}, positions
-        )
+        result = gate._check_correlation({"symbol": "BTC-USDT-SWAP"}, positions)
         # Correlation is WARNING only, not reject
         assert result.passed is True
         assert "correlation" in result.rule
@@ -472,9 +484,7 @@ class TestCheckCorrelation:
     def test_different_symbol_passes(self, gate):
         """Different symbol -> pass with no warning."""
         positions = [{"instId": "ETH-USDT-SWAP"}]
-        result = gate._check_correlation(
-            {"symbol": "BTC-USDT-SWAP"}, positions
-        )
+        result = gate._check_correlation({"symbol": "BTC-USDT-SWAP"}, positions)
         assert result.passed is True
 
 
