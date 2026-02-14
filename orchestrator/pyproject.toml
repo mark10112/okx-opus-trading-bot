@@ -33,6 +33,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: requires real Redis + PostgreSQL (docker-compose.test.yml)",
+]
 
 [tool.ruff]
 target-version = "py312"

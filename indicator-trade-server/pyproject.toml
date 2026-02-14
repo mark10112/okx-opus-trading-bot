@@ -33,6 +33,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: requires real Redis + PostgreSQL (docker-compose.test.yml)",
+    "okx_live: requires real OKX Demo API keys in .env",
+]
 
 [tool.ruff]
 target-version = "py312"
