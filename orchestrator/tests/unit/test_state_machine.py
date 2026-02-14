@@ -921,6 +921,127 @@ class TestAIIntegrationCycle:
         assert create_args["symbol"] == "BTC-USDT-SWAP"
         assert create_args["strategy_used"] == "momentum"
 
+    async def test_journaling_uses_opus_reasoning_field(
+        self, orchestrator, mock_redis, mock_opus_client, mock_trade_repo
+    ):
+        """Regression: journaling must use 'opus_reasoning', not 'reasoning'."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(
+                action="OPEN_LONG",
+                symbol="BTC-USDT-SWAP",
+                size_pct=0.03,
+                entry_price=60000.0,
+                stop_loss=58500.0,
+                take_profit=63000.0,
+            ),
+            confidence=0.75,
+            strategy_used="momentum",
+            reasoning="Strong trend signal",
+            analysis=AnalysisResult(market_regime="trending_up"),
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        create_args = mock_trade_repo.create.call_args[0][0]
+        assert "opus_reasoning" in create_args, "Should use 'opus_reasoning' not 'reasoning'"
+        assert "reasoning" not in create_args, "'reasoning' is not a TradeORM column"
+        assert create_args["opus_reasoning"] == "Strong trend signal"
+
+    async def test_journaling_no_fill_data_field(
+        self, orchestrator, mock_redis, mock_opus_client, mock_trade_repo
+    ):
+        """Regression: journaling must not pass 'fill_data' to TradeORM."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(
+                action="OPEN_LONG",
+                symbol="BTC-USDT-SWAP",
+                size_pct=0.03,
+                entry_price=60000.0,
+                stop_loss=58500.0,
+                take_profit=63000.0,
+            ),
+            confidence=0.75,
+            strategy_used="momentum",
+            reasoning="Strong trend",
+            analysis=AnalysisResult(market_regime="trending_up"),
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        create_args = mock_trade_repo.create.call_args[0][0]
+        assert "fill_data" not in create_args, "'fill_data' is not a TradeORM column"
+
+    async def test_journaling_direction_maps_to_short_form(
+        self, orchestrator, mock_redis, mock_opus_client, mock_trade_repo
+    ):
+        """Regression: direction must be 'LONG'/'SHORT', not 'OPEN_LONG'/'OPEN_SHORT'."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(
+                action="OPEN_SHORT",
+                symbol="ETH-USDT-SWAP",
+                size_pct=0.02,
+                entry_price=3000.0,
+                stop_loss=3100.0,
+                take_profit=2800.0,
+            ),
+            confidence=0.80,
+            strategy_used="mean_reversion",
+            reasoning="Overbought",
+            analysis=AnalysisResult(market_regime="volatile"),
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-2", "fill_price": 3000.0},
+        )
+
+        await orchestrator._run_cycle("ETH-USDT-SWAP")
+
+        create_args = mock_trade_repo.create.call_args[0][0]
+        assert create_args["direction"] in ("LONG", "SHORT"), (
+            f"direction must be LONG/SHORT, got {create_args['direction']}"
+        )
+        assert create_args["direction"] == "SHORT"
+
+    async def test_journaling_has_required_trade_fields(
+        self, orchestrator, mock_redis, mock_opus_client, mock_trade_repo
+    ):
+        """Regression: journaling must include trade_id, opened_at, size, status."""
+        mock_opus_client.analyze.return_value = OpusDecision(
+            decision=Decision(
+                action="OPEN_LONG",
+                symbol="BTC-USDT-SWAP",
+                size_pct=0.03,
+                entry_price=60000.0,
+                stop_loss=58500.0,
+                take_profit=63000.0,
+            ),
+            confidence=0.75,
+            strategy_used="momentum",
+            reasoning="Strong trend",
+            analysis=AnalysisResult(market_regime="trending_up"),
+        )
+        mock_redis.read_latest.side_effect = _make_read_latest_router(
+            snapshot_payload=_make_snapshot_msg(),
+            fill_payload={"ord_id": "ord-1", "fill_price": 60000.0},
+        )
+
+        await orchestrator._run_cycle("BTC-USDT-SWAP")
+
+        create_args = mock_trade_repo.create.call_args[0][0]
+        assert "trade_id" in create_args, "Missing required field 'trade_id'"
+        assert "opened_at" in create_args, "Missing required field 'opened_at'"
+        assert "size" in create_args, "Missing required field 'size'"
+        assert "status" in create_args, "Missing required field 'status'"
+        assert create_args["status"] == "open"
+
     async def test_reflecting_calls_engine(
         self, orchestrator, mock_redis, mock_reflection_repo, mock_reflection_engine
     ):
