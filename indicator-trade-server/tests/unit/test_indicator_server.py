@@ -242,6 +242,29 @@ class TestSnapshotLoop:
             assert mock_redis.publish.await_count >= 1
 
 
+# --- _fetch_funding ---
+
+
+class TestFetchFunding:
+    async def test_fetch_funding_handles_empty_string_values(
+        self, server: IndicatorServer
+    ) -> None:
+        with (
+            patch("okx.PublicData.PublicAPI") as mock_api_cls,
+            patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread,
+        ):
+            mock_api_cls.return_value = MagicMock()
+            mock_to_thread.return_value = {
+                "code": "0",
+                "data": [{"fundingRate": "", "nextFundingRate": ""}],
+            }
+
+            funding = await server._fetch_funding("BTC-USDT-SWAP")
+
+            assert funding.current == 0.0
+            assert funding.predicted == 0.0
+
+
 # --- _detect_anomalies ---
 
 
